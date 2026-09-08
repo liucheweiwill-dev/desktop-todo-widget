@@ -12,13 +12,18 @@ internal static class DesktopAttach
     private static readonly nint WsPopup = unchecked((nint)0x80000000);
     private const nint WsExToolWindow = 0x00000080;
     private const nint WsExAppWindow = 0x00040000;
+    internal const int WmWindowPosChanging = 0x0046;
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoMove = 0x0002;
-    private const uint SwpNoZOrder = 0x0004;
+    internal const uint SwpNoZOrder = 0x0004;
     private const uint SwpNoActivate = 0x0010;
     private const uint SwpFrameChanged = 0x0020;
+    private const uint RdwInvalidate = 0x0001;
+    private const uint RdwErase = 0x0004;
+    private const uint RdwAllChildren = 0x0080;
+    private const uint RdwUpdateNow = 0x0100;
     private const uint ProgmanCreateWorkerwMessage = 0x052C;
-    private static readonly IntPtr HwndBottom = new(1);
+    internal static readonly IntPtr HwndBottom = new(1);
 
     public static InteropOperationResult ConfigureToolWindow(IntPtr window)
     {
@@ -212,6 +217,32 @@ internal static class DesktopAttach
         return new InteropOperationResult(true, 0, "SetWindowPos(HWND_BOTTOM) completed");
     }
 
+    // This only runs during a normal process shutdown. Forced termination (Task Manager) or a crash
+    // does not execute this code, so stale pixels can remain; that is an inherent limitation of this technique.
+    public static void RequestDesktopRepaint(IntPtr parent, Action<string> writeLog)
+    {
+        if (parent == IntPtr.Zero)
+        {
+            writeLog("desktop repaint skipped: parent is null");
+            return;
+        }
+
+        if (!IsWindow(parent))
+        {
+            writeLog($"desktop repaint skipped: parent is invalid hwnd={FormatHandle(parent)}");
+            return;
+        }
+
+        Marshal.SetLastPInvokeError(0);
+        var success = RedrawWindow(
+            parent,
+            IntPtr.Zero,
+            IntPtr.Zero,
+            RdwInvalidate | RdwErase | RdwAllChildren | RdwUpdateNow);
+        var lastError = success ? 0 : Marshal.GetLastPInvokeError();
+        writeLog($"desktop repaint success={success} parent={FormatHandle(parent)} lastError={lastError}");
+    }
+
     public static bool IsWindow(IntPtr window) => IsWindowNative(window);
 
     public static string GetWindowClassName(IntPtr window)
@@ -262,6 +293,25 @@ internal static class DesktopAttach
     internal readonly record struct StyleSnapshot(nint Style, nint ExStyle);
 
     internal readonly record struct DpiSnapshot(int Awareness, uint Dpi);
+
+    // https://learn.microsoft.com/windows/win32/api/winuser/ns-winuser-windowpos
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct WindowPos
+    {
+        public IntPtr Hwnd;
+
+        public IntPtr HwndInsertAfter;
+
+        public int X;
+
+        public int Y;
+
+        public int Cx;
+
+        public int Cy;
+
+        public uint Flags;
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct Point
@@ -325,6 +375,11 @@ internal static class DesktopAttach
     // https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setparent
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr SetParent(IntPtr child, IntPtr newParent);
+
+    // https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-redrawwindow
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool RedrawWindow(IntPtr window, IntPtr updateRectangle, IntPtr updateRegion, uint flags);
 
     // https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getwindowrect
     [DllImport("user32.dll", SetLastError = true)]
