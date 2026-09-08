@@ -492,12 +492,13 @@
                     BorderThickness="{TemplateBinding BorderThickness}">
               <Grid>
                 <Grid.RowDefinitions>
-                  <RowDefinition Height="{x:Static SystemParameters.VerticalScrollBarButtonHeight}" />
+                  <RowDefinition Height="Auto" />
                   <RowDefinition Height="*" />
-                  <RowDefinition Height="{x:Static SystemParameters.VerticalScrollBarButtonHeight}" />
+                  <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <RepeatButton x:Name="PART_LineUpButton"
+                              Height="{x:Static SystemParameters.VerticalScrollBarButtonHeight}"
                               Command="{x:Static ScrollBar.LineUpCommand}"
                               CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
                               Style="{StaticResource TodoScrollBarLineButtonStyle}">
@@ -525,6 +526,7 @@
 
                 <RepeatButton x:Name="PART_LineDownButton"
                               Grid.Row="2"
+                              Height="{x:Static SystemParameters.VerticalScrollBarButtonHeight}"
                               Command="{x:Static ScrollBar.LineDownCommand}"
                               CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
                               Style="{StaticResource TodoScrollBarLineButtonStyle}">
