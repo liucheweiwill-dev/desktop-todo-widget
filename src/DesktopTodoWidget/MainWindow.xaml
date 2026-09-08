@@ -21,7 +21,20 @@
     </ContextMenu>
   </Window.ContextMenu>
 
-  <Grid Margin="12">
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="24" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <Border x:Name="WindowDragStrip"
+            Grid.Row="0"
+            Background="{StaticResource InputBackgroundBrush}"
+            BorderBrush="{StaticResource DividerBrush}"
+            BorderThickness="0,0,0,1" />
+
+    <Grid Grid.Row="1"
+          Margin="12">
     <Grid.RowDefinitions>
       <RowDefinition Height="*" />
       <RowDefinition Height="Auto" />
@@ -57,7 +70,8 @@
 
     <Grid x:Name="TaskListPanel"
           Grid.Row="0">
-      <ScrollViewer VerticalScrollBarVisibility="Auto"
+      <ScrollViewer x:Name="TaskListScrollViewer"
+                    VerticalScrollBarVisibility="Auto"
                     HorizontalScrollBarVisibility="Disabled"
                     Background="{StaticResource WindowBackgroundBrush}"
                     Foreground="{StaticResource PrimaryTextBrush}">
@@ -71,7 +85,8 @@
                       ItemsSource="{Binding Items}">
           <ItemsControl.ItemTemplate>
             <DataTemplate DataType="{x:Type data:TodoListItemViewModel}">
-              <Grid Margin="0,0,0,6">
+              <Grid Margin="0,0,0,6"
+                    PreviewMouseLeftButtonDown="TodoItemGrid_PreviewMouseLeftButtonDown">
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition Width="Auto" />
                   <ColumnDefinition Width="*" />
@@ -86,7 +101,8 @@
                           Click="TodoItemCheckBox_Click" />
 
                 <Grid Grid.Column="1">
-                  <Button BorderThickness="0"
+                  <Button x:Name="TodoItemTextButton"
+                          BorderThickness="0"
                           HorizontalContentAlignment="Left"
                           Padding="0"
                           VerticalContentAlignment="Center"
@@ -156,6 +172,14 @@
           </Style>
         </TextBlock.Style>
       </TextBlock>
+
+      <Canvas IsHitTestVisible="False">
+        <Border x:Name="DragInsertionIndicator"
+                Height="2"
+                Background="{StaticResource FocusBorderBrush}"
+                Visibility="Collapsed" />
+      </Canvas>
     </Grid>
+  </Grid>
   </Grid>
 </Window>

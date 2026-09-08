@@ -121,6 +121,92 @@ public sealed class TodoListViewModelTests
     }
 
     [Fact]
+    public void Move_forward_usesACollectionMoveAndPreservesTheRemainingOrder()
+    {
+        var viewModel = new TodoListViewModel([CreateItem("First"), CreateItem("Second"), CreateItem("Third")]);
+        var collectionChanges = new List<System.Collections.Specialized.NotifyCollectionChangedEventArgs>();
+        viewModel.Items.CollectionChanged += (_, eventArgs) => collectionChanges.Add(eventArgs);
+
+        viewModel.Move(0, 1);
+
+        Assert.Equal(["Second", "First", "Third"], viewModel.Items.Select(item => item.Text));
+        Assert.Equal(System.Collections.Specialized.NotifyCollectionChangedAction.Move, Assert.Single(collectionChanges).Action);
+    }
+
+    [Fact]
+    public void Move_firstItemToLast_handlesTheCollectionBoundary()
+    {
+        var viewModel = new TodoListViewModel([CreateItem("First"), CreateItem("Second"), CreateItem("Third")]);
+
+        viewModel.Move(0, 2);
+
+        Assert.Equal(["Second", "Third", "First"], viewModel.Items.Select(item => item.Text));
+    }
+
+    [Fact]
+    public void Move_backward_preservesTheRemainingOrder()
+    {
+        var viewModel = new TodoListViewModel([CreateItem("First"), CreateItem("Second"), CreateItem("Third")]);
+
+        viewModel.Move(2, 0);
+
+        Assert.Equal(["Third", "First", "Second"], viewModel.Items.Select(item => item.Text));
+    }
+
+    [Fact]
+    public void Move_sameIndex_keepsTheCollectionAndDoesNotNotifyPersistence()
+    {
+        var notificationCount = 0;
+        var viewModel = new TodoListViewModel([CreateItem("First"), CreateItem("Second")], () => notificationCount++);
+
+        viewModel.Move(1, 1);
+
+        Assert.Equal(["First", "Second"], viewModel.Items.Select(item => item.Text));
+        Assert.Equal(0, notificationCount);
+    }
+
+    [Fact]
+    public void Move_outOfRangeIndices_areIgnoredWithoutThrowingOrNotifyingPersistence()
+    {
+        var notificationCount = 0;
+        var viewModel = new TodoListViewModel([CreateItem("First"), CreateItem("Second")], () => notificationCount++);
+
+        var exception = Record.Exception(() =>
+        {
+            viewModel.Move(-1, 0);
+            viewModel.Move(0, -1);
+            viewModel.Move(2, 0);
+            viewModel.Move(0, 2);
+        });
+
+        Assert.Null(exception);
+        Assert.Equal(["First", "Second"], viewModel.Items.Select(item => item.Text));
+        Assert.Equal(0, notificationCount);
+    }
+
+    [Fact]
+    public void Move_completedItem_allowsItToMoveWithoutChangingItsCompletionState()
+    {
+        var viewModel = new TodoListViewModel([CreateItem("First"), CreateItem("Done", isDone: true), CreateItem("Third")]);
+
+        viewModel.Move(1, 0);
+
+        Assert.Equal(["Done", "First", "Third"], viewModel.Items.Select(item => item.Text));
+        Assert.True(viewModel.Items[0].IsDone);
+    }
+
+    [Fact]
+    public void Move_validIndices_notifyTheInjectedPersistenceCallback()
+    {
+        var notificationCount = 0;
+        var viewModel = new TodoListViewModel([CreateItem("First"), CreateItem("Second")], () => notificationCount++);
+
+        viewModel.Move(0, 1);
+
+        Assert.Equal(1, notificationCount);
+    }
+
+    [Fact]
     public void Mutations_notifyTheInjectedPersistenceCallback()
     {
         var notificationCount = 0;
@@ -134,12 +220,13 @@ public sealed class TodoListViewModelTests
         Assert.Equal(4, notificationCount);
     }
 
-    private static TodoItem CreateItem(string text)
+    private static TodoItem CreateItem(string text, bool isDone = false)
     {
         return new TodoItem
         {
             Id = Guid.NewGuid(),
             Text = text,
+            IsDone = isDone,
             CreatedUtc = DateTimeOffset.UtcNow
         };
     }

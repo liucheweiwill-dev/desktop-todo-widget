@@ -20,19 +20,29 @@ public partial class MainWindow : Window
     private const double DefaultTop = 80;
     private const double WindowWidth = 360;
     private const double WindowHeight = 420;
+    private const double ItemDragThreshold = 5;
+    private const double AutoScrollEdgeHeight = 20;
+    private const double AutoScrollStep = 10;
 
     private readonly AtomicJsonStore<WindowPlacement> _placementStore;
     private readonly DispatcherTimer _placementSaveTimer;
     private readonly TodoDocumentStore _todoStore;
     private readonly TodoListViewModel _todoList;
     private readonly DispatcherTimer _todoSaveTimer;
+    private readonly DispatcherTimer _itemAutoScrollTimer;
     private readonly bool _todosAreReadOnly;
     private IntPtr _windowHandle;
     private HwndSource? _windowSource;
     private HwndSourceHook? _bottommostZOrderHook;
     private bool _isDragInProgress;
+    private bool _isItemDragCandidate;
+    private bool _isItemDragInProgress;
     private bool _placementSavePending;
     private bool _todoSavePending;
+    private TodoListItemViewModel? _draggedTodoItem;
+    private Point _itemDragStartPoint;
+    private int _dragSourceIndex = -1;
+    private int _dragTargetIndex = -1;
 
     internal MainWindow(
         AtomicJsonStore<WindowPlacement> placementStore,
@@ -51,11 +61,16 @@ public partial class MainWindow : Window
         Closed += MainWindow_Closed;
         PreviewKeyDown += MainWindow_PreviewKeyDown;
         PreviewMouseLeftButtonDown += MainWindow_PreviewMouseLeftButtonDown;
+        PreviewMouseMove += MainWindow_PreviewMouseMove;
+        PreviewMouseLeftButtonUp += MainWindow_PreviewMouseLeftButtonUp;
+        TodoItemsControl.LostMouseCapture += TodoItemsControl_LostMouseCapture;
 
         _placementSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _placementSaveTimer.Tick += PlacementSaveTimer_Tick;
         _todoSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _todoSaveTimer.Tick += TodoSaveTimer_Tick;
+        _itemAutoScrollTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+        _itemAutoScrollTimer.Tick += ItemAutoScrollTimer_Tick;
 
         if (_todosAreReadOnly)
         {
@@ -196,11 +211,30 @@ public partial class MainWindow : Window
 
     private void MainWindow_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.ChangedButton != MouseButton.Left || IsInsideControl(e.OriginalSource as DependencyObject))
+        if (e.ChangedButton != MouseButton.Left)
         {
             return;
         }
 
+        var source = e.OriginalSource as DependencyObject;
+        if (IsDescendantOf(source, WindowDragStrip))
+        {
+            MoveWindow();
+            e.Handled = true;
+            return;
+        }
+
+        if (FindTodoItem(source) is not null || IsInsideControl(source))
+        {
+            return;
+        }
+
+        MoveWindow();
+        e.Handled = true;
+    }
+
+    private void MoveWindow()
+    {
         _isDragInProgress = true;
         try
         {
@@ -216,6 +250,36 @@ public partial class MainWindow : Window
         }
 
         SchedulePlacementSave();
+    }
+
+    private static TodoListItemViewModel? FindTodoItem(DependencyObject? element)
+    {
+        while (element is not null)
+        {
+            if (element is FrameworkElement { DataContext: TodoListItemViewModel item })
+            {
+                return item;
+            }
+
+            element = GetParent(element);
+        }
+
+        return null;
+    }
+
+    private static bool IsDescendantOf(DependencyObject? element, DependencyObject ancestor)
+    {
+        while (element is not null)
+        {
+            if (ReferenceEquals(element, ancestor))
+            {
+                return true;
+            }
+
+            element = GetParent(element);
+        }
+
+        return false;
     }
 
     private bool IsInsideControl(DependencyObject? element)
@@ -259,6 +323,279 @@ public partial class MainWindow : Window
             FrameworkContentElement contentElement => contentElement.Parent,
             _ => LogicalTreeHelper.GetParent(element)
         };
+    }
+
+    private void TodoItemGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_todosAreReadOnly ||
+            e.ChangedButton != MouseButton.Left ||
+            sender is not Grid { DataContext: TodoListItemViewModel item } ||
+            IsItemDragExcluded(e.OriginalSource as DependencyObject))
+        {
+            return;
+        }
+
+        CancelItemDrag();
+        _draggedTodoItem = item;
+        _dragSourceIndex = _todoList.Items.IndexOf(item);
+        _dragTargetIndex = _dragSourceIndex;
+        _itemDragStartPoint = e.GetPosition(TaskListScrollViewer);
+        _isItemDragCandidate = _dragSourceIndex >= 0;
+    }
+
+    private static bool IsItemDragExcluded(DependencyObject? element)
+    {
+        while (element is not null)
+        {
+            if (element is CheckBox or TextBoxBase or PasswordBox or ComboBox or ScrollBar or Thumb or Slider)
+            {
+                return true;
+            }
+
+            if (element is Button button && !string.Equals(button.Name, "TodoItemTextButton", StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            element = GetParent(element);
+        }
+
+        return false;
+    }
+
+    private void MainWindow_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_isItemDragCandidate && !_isItemDragInProgress)
+        {
+            return;
+        }
+
+        if (e.LeftButton != MouseButtonState.Pressed)
+        {
+            CancelItemDrag();
+            return;
+        }
+
+        var pointerPosition = e.GetPosition(TaskListScrollViewer);
+        if (!_isItemDragInProgress)
+        {
+            if (Math.Abs(pointerPosition.Y - _itemDragStartPoint.Y) <= ItemDragThreshold)
+            {
+                return;
+            }
+
+            BeginItemDrag();
+        }
+
+        if (!_isItemDragInProgress)
+        {
+            return;
+        }
+
+        UpdateItemDrag(pointerPosition);
+        e.Handled = true;
+    }
+
+    private void BeginItemDrag()
+    {
+        if (!_isItemDragCandidate || _draggedTodoItem is null)
+        {
+            CancelItemDrag();
+            return;
+        }
+
+        _dragSourceIndex = _todoList.Items.IndexOf(_draggedTodoItem);
+        if (_dragSourceIndex < 0 || !Mouse.Capture(TodoItemsControl))
+        {
+            CancelItemDrag();
+            return;
+        }
+
+        _dragTargetIndex = _dragSourceIndex;
+        _isItemDragCandidate = false;
+        _isItemDragInProgress = true;
+    }
+
+    private void UpdateItemDrag(Point pointerPosition)
+    {
+        var insertionIndex = FindItemInsertionIndex(pointerPosition);
+        _dragTargetIndex = insertionIndex > _dragSourceIndex
+            ? insertionIndex - 1
+            : insertionIndex;
+
+        ShowDragInsertionIndicator(insertionIndex);
+        UpdateItemAutoScroll(pointerPosition);
+    }
+
+    private int FindItemInsertionIndex(Point pointerPosition)
+    {
+        var itemPoint = TaskListScrollViewer.TranslatePoint(pointerPosition, TodoItemsControl);
+        for (var index = 0; index < _todoList.Items.Count; index++)
+        {
+            var bounds = GetTodoItemBounds(index, TodoItemsControl);
+            if (bounds is not null && itemPoint.Y < bounds.Value.Top + (bounds.Value.Height / 2))
+            {
+                return index;
+            }
+        }
+
+        return _todoList.Items.Count;
+    }
+
+    private void ShowDragInsertionIndicator(int insertionIndex)
+    {
+        if (_todoList.Items.Count == 0)
+        {
+            DragInsertionIndicator.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var referenceIndex = insertionIndex < _todoList.Items.Count
+            ? insertionIndex
+            : _todoList.Items.Count - 1;
+        var bounds = GetTodoItemBounds(referenceIndex, TaskListPanel);
+        if (bounds is null)
+        {
+            DragInsertionIndicator.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var top = insertionIndex < _todoList.Items.Count
+            ? bounds.Value.Top
+            : bounds.Value.Bottom;
+        DragInsertionIndicator.Width = TaskListPanel.ActualWidth;
+        Canvas.SetLeft(DragInsertionIndicator, 0);
+        Canvas.SetTop(DragInsertionIndicator, top - (DragInsertionIndicator.Height / 2));
+        DragInsertionIndicator.Visibility = Visibility.Visible;
+    }
+
+    private Rect? GetTodoItemBounds(int index, Visual ancestor)
+    {
+        if (TodoItemsControl.ItemContainerGenerator.ContainerFromIndex(index) is not FrameworkElement container)
+        {
+            return null;
+        }
+
+        var topLeft = container.TransformToAncestor(ancestor).Transform(new Point());
+        return new Rect(topLeft, container.RenderSize);
+    }
+
+    private void UpdateItemAutoScroll(Point pointerPosition)
+    {
+        if (GetItemAutoScrollDirection(pointerPosition) == 0)
+        {
+            _itemAutoScrollTimer.Stop();
+            return;
+        }
+
+        _itemAutoScrollTimer.Start();
+    }
+
+    private int GetItemAutoScrollDirection(Point pointerPosition)
+    {
+        if (TaskListScrollViewer.ScrollableHeight <= 0 || TaskListScrollViewer.ActualHeight <= 0)
+        {
+            return 0;
+        }
+
+        if (pointerPosition.Y <= AutoScrollEdgeHeight)
+        {
+            return -1;
+        }
+
+        if (pointerPosition.Y >= TaskListScrollViewer.ActualHeight - AutoScrollEdgeHeight)
+        {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    private void ItemAutoScrollTimer_Tick(object? sender, EventArgs e)
+    {
+        if (!_isItemDragInProgress)
+        {
+            _itemAutoScrollTimer.Stop();
+            return;
+        }
+
+        var pointerPosition = Mouse.GetPosition(TaskListScrollViewer);
+        var direction = GetItemAutoScrollDirection(pointerPosition);
+        if (direction == 0)
+        {
+            _itemAutoScrollTimer.Stop();
+            return;
+        }
+
+        var nextOffset = Math.Clamp(
+            TaskListScrollViewer.VerticalOffset + (direction * AutoScrollStep),
+            0,
+            TaskListScrollViewer.ScrollableHeight);
+        if (nextOffset == TaskListScrollViewer.VerticalOffset)
+        {
+            _itemAutoScrollTimer.Stop();
+            return;
+        }
+
+        TaskListScrollViewer.ScrollToVerticalOffset(nextOffset);
+        UpdateItemDrag(pointerPosition);
+    }
+
+    private void MainWindow_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left || (!_isItemDragCandidate && !_isItemDragInProgress))
+        {
+            return;
+        }
+
+        if (!_isItemDragInProgress)
+        {
+            CancelItemDrag();
+            return;
+        }
+
+        UpdateItemDrag(e.GetPosition(TaskListScrollViewer));
+        var fromIndex = _draggedTodoItem is null
+            ? -1
+            : _todoList.Items.IndexOf(_draggedTodoItem);
+        var toIndex = _dragTargetIndex;
+        CompleteItemDrag();
+        _todoList.Move(fromIndex, toIndex);
+        e.Handled = true;
+    }
+
+    private void TodoItemsControl_LostMouseCapture(object sender, MouseEventArgs e)
+    {
+        if (_isItemDragInProgress)
+        {
+            CancelItemDrag();
+        }
+    }
+
+    private void CompleteItemDrag()
+    {
+        ClearItemDragState();
+    }
+
+    private void CancelItemDrag()
+    {
+        ClearItemDragState();
+    }
+
+    private void ClearItemDragState()
+    {
+        _isItemDragCandidate = false;
+        _isItemDragInProgress = false;
+        _draggedTodoItem = null;
+        _dragSourceIndex = -1;
+        _dragTargetIndex = -1;
+        _itemAutoScrollTimer.Stop();
+        DragInsertionIndicator.Visibility = Visibility.Collapsed;
+
+        if (ReferenceEquals(Mouse.Captured, TodoItemsControl))
+        {
+            Mouse.Capture(null);
+        }
     }
 
     private void NewTaskTextBox_KeyDown(object sender, KeyEventArgs e)
@@ -479,6 +816,13 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (_isItemDragInProgress)
+        {
+            CancelItemDrag();
+            e.Handled = true;
+            return;
+        }
+
         var editingItem = _todoList.EditingItem;
         if (editingItem is not null)
         {
@@ -498,6 +842,7 @@ public partial class MainWindow : Window
 
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        CancelItemDrag();
         CommitActiveTodoEdit();
         SavePendingTodos();
         SaveCurrentPlacement(force: true);
@@ -507,6 +852,7 @@ public partial class MainWindow : Window
     {
         _placementSaveTimer.Stop();
         _todoSaveTimer.Stop();
+        _itemAutoScrollTimer.Stop();
         RemoveBottommostZOrderHook();
     }
 }

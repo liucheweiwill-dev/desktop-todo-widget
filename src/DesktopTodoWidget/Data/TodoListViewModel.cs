@@ -84,6 +84,21 @@ public sealed class TodoListViewModel : INotifyPropertyChanged
         return true;
     }
 
+    public void Move(int fromIndex, int toIndex)
+    {
+        if (fromIndex < 0 ||
+            fromIndex >= Items.Count ||
+            toIndex < 0 ||
+            toIndex >= Items.Count ||
+            fromIndex == toIndex)
+        {
+            return;
+        }
+
+        Items.Move(fromIndex, toIndex);
+        NotifyChanged();
+    }
+
     public bool Rename(TodoListItemViewModel item, string text)
     {
         if (item is null || !Items.Contains(item))
