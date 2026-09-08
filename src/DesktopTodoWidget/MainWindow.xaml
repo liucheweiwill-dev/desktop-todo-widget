@@ -46,7 +46,7 @@
                AllowsTransparency="False"
                Focusable="False"
                Placement="Bottom"
-               PlacementTarget="{Binding ElementName=HelpButton}"
+               PlacementTarget="{Binding ElementName=WindowDragStrip}"
                PopupAnimation="Fade"
                StaysOpen="False">
           <Border Margin="0,4,0,0"
