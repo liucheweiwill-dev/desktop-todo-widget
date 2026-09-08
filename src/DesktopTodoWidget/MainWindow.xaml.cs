@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     private IntPtr _windowHandle;
     private HwndSource? _windowSource;
     private HwndSourceHook? _bottommostZOrderHook;
+    private bool _isDragInProgress;
     private bool _placementSavePending;
 
     internal MainWindow(AtomicJsonStore<WindowPlacement> placementStore)
@@ -157,7 +158,7 @@ public partial class MainWindow : Window
         IntPtr lParam,
         ref bool handled)
     {
-        if (message == DesktopAttach.WmWindowPosChanging && lParam != IntPtr.Zero)
+        if (!_isDragInProgress && message == DesktopAttach.WmWindowPosChanging && lParam != IntPtr.Zero)
         {
             var windowPos = Marshal.PtrToStructure<DesktopAttach.WindowPos>(lParam);
             windowPos.HwndInsertAfter = DesktopAttach.HwndBottom;
@@ -175,7 +176,20 @@ public partial class MainWindow : Window
             return;
         }
 
-        DragMove();
+        _isDragInProgress = true;
+        try
+        {
+            DragMove();
+        }
+        finally
+        {
+            _isDragInProgress = false;
+            var bottommostResult = DesktopAttach.MoveToBottommost(_windowHandle);
+            Trace.WriteLine(
+                $"DesktopTodoWidget bottommost after drag success={bottommostResult.Success} " +
+                $"lastError={bottommostResult.LastError} detail={bottommostResult.Detail}");
+        }
+
         SchedulePlacementSave();
     }
 
