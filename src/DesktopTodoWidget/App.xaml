@@ -23,13 +23,13 @@
     <SolidColorBrush x:Key="StatusTextBrush" Color="#F0B45B" />
     <SolidColorBrush x:Key="TransparentBrush" Color="Transparent" />
     <SolidColorBrush x:Key="TodoColorDefaultBrush" Color="#F2F2F2" />
-    <SolidColorBrush x:Key="TodoColorYellowBrush" Color="#FFF176" />
-    <SolidColorBrush x:Key="TodoColorOrangeBrush" Color="#FFB74D" />
-    <SolidColorBrush x:Key="TodoColorRedBrush" Color="#FFAB91" />
-    <SolidColorBrush x:Key="TodoColorGreenBrush" Color="#A5D6A7" />
-    <SolidColorBrush x:Key="TodoColorBlueBrush" Color="#81D4FA" />
-    <SolidColorBrush x:Key="TodoColorPurpleBrush" Color="#E1BEE7" />
-    <SolidColorBrush x:Key="TodoColorGreyBrush" Color="#BDBDBD" />
+    <SolidColorBrush x:Key="TodoColorYellowBrush" Color="#EDCB5A" />
+    <SolidColorBrush x:Key="TodoColorOrangeBrush" Color="#EF8B3F" />
+    <SolidColorBrush x:Key="TodoColorRedBrush" Color="#E5606B" />
+    <SolidColorBrush x:Key="TodoColorGreenBrush" Color="#98C379" />
+    <SolidColorBrush x:Key="TodoColorBlueBrush" Color="#61AFEF" />
+    <SolidColorBrush x:Key="TodoColorPurpleBrush" Color="#C678DD" />
+    <SolidColorBrush x:Key="TodoColorCyanBrush" Color="#4EC9B0" />
 
     <Style x:Key="TodoTextBoxStyle" TargetType="{x:Type TextBox}">
       <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
@@ -275,8 +275,8 @@
         <DataTrigger Binding="{Binding EffectiveColorKey}" Value="purple">
           <Setter Property="Foreground" Value="{StaticResource TodoColorPurpleBrush}" />
         </DataTrigger>
-        <DataTrigger Binding="{Binding EffectiveColorKey}" Value="grey">
-          <Setter Property="Foreground" Value="{StaticResource TodoColorGreyBrush}" />
+        <DataTrigger Binding="{Binding EffectiveColorKey}" Value="cyan">
+          <Setter Property="Foreground" Value="{StaticResource TodoColorCyanBrush}" />
         </DataTrigger>
         <DataTrigger Binding="{Binding IsDone}" Value="True">
           <Setter Property="TextDecorations" Value="Strikethrough" />
@@ -565,7 +565,7 @@
     <sys:String x:Key="GreenColorText">Green</sys:String>
     <sys:String x:Key="BlueColorText">Blue</sys:String>
     <sys:String x:Key="PurpleColorText">Purple</sys:String>
-    <sys:String x:Key="GreyColorText">Grey</sys:String>
+    <sys:String x:Key="CyanColorText">Cyan</sys:String>
     <sys:String x:Key="RecoveredFromBackupText">Tasks were recovered from backup.</sys:String>
     <sys:String x:Key="ReadOnlySchemaText">This todo list was created by a newer version and is read-only.</sys:String>
   </Application.Resources>

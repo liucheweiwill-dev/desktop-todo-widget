@@ -305,15 +305,15 @@
                               </Style>
                             </Button.Style>
                           </Button>
-                          <Button Tag="grey"
+                          <Button Tag="cyan"
                                   Margin="4,0,0,0"
-                                  Background="{StaticResource TodoColorGreyBrush}"
-                                  ToolTip="{DynamicResource GreyColorText}"
+                                  Background="{StaticResource TodoColorCyanBrush}"
+                                  ToolTip="{DynamicResource CyanColorText}"
                                   Click="TodoItemColorButton_Click">
                             <Button.Style>
                               <Style TargetType="{x:Type Button}" BasedOn="{StaticResource TodoColorSwatchButtonStyle}">
                                 <Style.Triggers>
-                                  <DataTrigger Binding="{Binding EffectiveColorKey}" Value="grey">
+                                  <DataTrigger Binding="{Binding EffectiveColorKey}" Value="cyan">
                                     <Setter Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
                                     <Setter Property="BorderThickness" Value="2" />
                                   </DataTrigger>

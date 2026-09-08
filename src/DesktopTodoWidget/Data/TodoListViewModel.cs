@@ -22,7 +22,7 @@ public sealed class TodoListViewModel : INotifyPropertyChanged
         "green",
         "blue",
         "purple",
-        "grey"
+        "cyan"
     });
 
     private readonly Action? _onChanged;
