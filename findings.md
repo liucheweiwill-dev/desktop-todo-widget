@@ -278,21 +278,67 @@ W1 之後依此定義進行。
 
 ## D5. 打包形態（決策延後至 P1）
 
-需求 7 寫「single file self-contained exe」，需求 10 又允許免安裝資料夾。兩者的實質差別：
+需求 7 寫「single file self-contained exe」，需求 10 又允許免安裝資料夾。
 
-要真正只產出一個 exe，必須開 `IncludeNativeLibrariesForSelfExtract=true`，
-而**那會讓 native runtime DLL 在執行時解壓到 `%TEMP%\.net`**。
-那不是安裝 runtime，但也不能宣稱「完全不在端機留下檔案」，且不保證立刻清除。
+### 實測：形態其實有三種，不是兩種（2026-09-08）
 
-| 形態 | 取捨 |
-|---|---|
-| 免安裝資料夾 | 不解壓到 TEMP、無 single-file 相容性邊角、可觀察 |
-| 單一 exe | 交付最簡單，接受 `%TEMP%\.net` 解壓行為 |
+`PublishSingleFile=true` **預設不會產出單一檔案**。WPF 的 native DLL 會被留在 exe 旁邊，
+必須另外開 `IncludeNativeLibrariesForSelfExtract=true` 才會包進去。
+這中間形態先前被漏掉，而它正是最划算的一個。
 
-`EnableCompressionInSingleFile` 可把體積壓到 60–95MB，代價是啟動時解壓到記憶體、
-啟動變慢。**體積不是框架常數，必須以實際成品量測。**
+三種形態實際建置並執行的結果：
+
+| 形態 | 檔案數 | 體積 | 執行時解壓到 `%TEMP%\.net` |
+|---|---|---|---|
+| 免安裝資料夾 | 257 | 141 MB | 無 |
+| **`PublishSingleFile` 預設** | **6**（exe + 5 個 native DLL） | **67 MB** | **無**（實測 `%TEMP%\.net` 全程未被建立） |
+| 加 `IncludeNativeLibrariesForSelfExtract=true` | **1** | **64.8 MB** | 7.8 MB／5 個檔案 |
+
+留在 exe 旁邊的五個 native DLL 是 `D3DCompiler_47_cor3.dll`、`wpfgfx_cor3.dll`、
+`PresentationNative_cor3.dll`、`PenImc_cor3.dll`、`vcruntime140_cor3.dll`。
+它們是 WPF 的原生元件，**無法從 bundle 記憶體載入**，這就是單一檔案必須解壓的原因。
+
+以上皆已開 `EnableCompressionInSingleFile`。
+
+### 關鍵：後兩者只差 2MB
+
+真正的取捨不是體積，而是：
+
+> 「1 個檔案，但每次更新在 `%TEMP%` 囤 7.8MB」
+> 對上
+> 「6 個檔案，但完全不碰 `%TEMP%`」
+
+### 解壓目錄的行為（實測）
+
+路徑是 `%TEMP%\.net\<程式名>\<bundle 內容雜湊>\`。
+
+**不會與其他程式衝突**：兩層都隔離，其他 .NET 單一檔案程式解到自己的名稱底下。
+
+**更新版本不會衝突，但會累積**。同一支程式發佈 v1.0.0 與 v1.0.1 後實測：
+
+```
+yoz6lh5qg2_N   5 files     ← v1.0.0
+WwThT_OSeXOE   5 files     ← v1.0.1（新目錄）
+總計 15.7 MB
+```
+
+雜湊由 bundle 內容決定，改了程式就換目錄，**舊目錄不會自動刪除**。
+不存在「新版讀到舊 DLL」的風險，代價是每更新一次囤 7.8MB。
+
+### 對常駐型程式的額外風險
+
+這支 widget 的定位是**開著整天不關**，而單一檔案形態下 native DLL 是**執行期從
+`%TEMP%` 載入**的。若「儲存空間感知」或磁碟清理在程式執行中動到那個目錄，
+可能出問題。免安裝資料夾與 6 檔形態都沒有這個風險——DLL 就在 exe 旁邊，
+不在任何自動清理路徑上，更新時直接覆蓋整個資料夾，沒有殘留。
+
+### 決策
 
 **此決策由使用者在 P1 階段拍板**，不由實作者自行決定。
+
+判準不是體積（三者差距已量出，67 與 64.8 只差 2MB），而是交付情境：
+若「丟一個檔案給人就能跑」是硬需求，只有第三種可行；
+若只是不想要 257 個檔案，第二種用 6 個檔案就達成，且沒有 `%TEMP%` 的問題。
 
 ---
 
