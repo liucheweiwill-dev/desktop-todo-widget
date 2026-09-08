@@ -3,6 +3,486 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sys="clr-namespace:System;assembly=mscorlib">
   <Application.Resources>
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#1E1E1E" />
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#F2F2F2" />
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#B8B8B8" />
+    <SolidColorBrush x:Key="CompletedTextBrush" Color="#B8B8B8" />
+    <SolidColorBrush x:Key="DisabledTextBrush" Color="#A6A6A6" />
+    <SolidColorBrush x:Key="InputBackgroundBrush" Color="#252526" />
+    <SolidColorBrush x:Key="InputBorderBrush" Color="#3E3E42" />
+    <SolidColorBrush x:Key="FocusBorderBrush" Color="#75BEFF" />
+    <SolidColorBrush x:Key="HoverBackgroundBrush" Color="#2A2D2E" />
+    <SolidColorBrush x:Key="SelectionBackgroundBrush" Color="#264F78" />
+    <SolidColorBrush x:Key="DividerBrush" Color="#3E3E42" />
+    <SolidColorBrush x:Key="MenuBackgroundBrush" Color="#252526" />
+    <SolidColorBrush x:Key="MenuHoverBackgroundBrush" Color="#094771" />
+    <SolidColorBrush x:Key="ScrollBarTrackBrush" Color="#252526" />
+    <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#5A5A5A" />
+    <SolidColorBrush x:Key="ScrollBarThumbHoverBrush" Color="#767676" />
+    <SolidColorBrush x:Key="DisabledBackgroundBrush" Color="#202020" />
+    <SolidColorBrush x:Key="StatusTextBrush" Color="#F0B45B" />
+    <SolidColorBrush x:Key="TransparentBrush" Color="Transparent" />
+
+    <Style x:Key="TodoTextBoxStyle" TargetType="{x:Type TextBox}">
+      <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+      <Setter Property="Background" Value="{StaticResource InputBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource InputBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CaretBrush" Value="{StaticResource PrimaryTextBrush}" />
+      <Setter Property="SelectionBrush" Value="{StaticResource SelectionBackgroundBrush}" />
+      <Setter Property="SelectionOpacity" Value="1" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type TextBox}">
+            <Border x:Name="TextBoxBorder"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    SnapsToDevicePixels="True">
+              <ScrollViewer x:Name="PART_ContentHost"
+                            Margin="{TemplateBinding Padding}"
+                            Background="{StaticResource TransparentBrush}"
+                            Focusable="False"
+                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                            SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource HoverBackgroundBrush}" />
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{StaticResource DisabledBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource DisabledTextBrush}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="TodoCheckBoxStyle" TargetType="{x:Type CheckBox}">
+      <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+      <Setter Property="Background" Value="{StaticResource TransparentBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource InputBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type CheckBox}">
+            <BulletDecorator Background="{TemplateBinding Background}">
+              <BulletDecorator.Bullet>
+                <Border x:Name="CheckBoxBorder"
+                        Width="13"
+                        Height="13"
+                        Background="{StaticResource InputBackgroundBrush}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        SnapsToDevicePixels="True">
+                  <Path x:Name="CheckMark"
+                        Data="M 2,7 L 5,10 L 11,3"
+                        Stroke="{TemplateBinding Foreground}"
+                        StrokeThickness="2"
+                        StrokeEndLineCap="Square"
+                        StrokeStartLineCap="Square"
+                        Visibility="Collapsed" />
+                </Border>
+              </BulletDecorator.Bullet>
+              <ContentPresenter Margin="4,0,0,0"
+                                VerticalAlignment="Center"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                ContentStringFormat="{TemplateBinding ContentStringFormat}"
+                                RecognizesAccessKey="True" />
+            </BulletDecorator>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="CheckBoxBorder" Property="Background" Value="{StaticResource HoverBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="CheckBoxBorder" Property="Background" Value="{StaticResource SelectionBackgroundBrush}" />
+              </Trigger>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="CheckBoxBorder" Property="Background" Value="{StaticResource SelectionBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="CheckBoxBorder" Property="Background" Value="{StaticResource DisabledBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource DisabledTextBrush}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="TodoTaskTextButtonStyle" TargetType="{x:Type Button}">
+      <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+      <Setter Property="Background" Value="{StaticResource TransparentBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource TransparentBrush}" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type Button}">
+            <Border x:Name="ButtonBorder"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}">
+              <ContentPresenter Margin="{TemplateBinding Padding}"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                ContentStringFormat="{TemplateBinding ContentStringFormat}"
+                                RecognizesAccessKey="True" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource HoverBackgroundBrush}" />
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{StaticResource SelectionBackgroundBrush}" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{StaticResource TransparentBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource TransparentBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource DisabledTextBrush}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="TodoDeleteButtonStyle" TargetType="{x:Type Button}">
+      <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+      <Setter Property="Background" Value="{StaticResource InputBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource InputBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type Button}">
+            <Border x:Name="DeleteButtonBorder"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}">
+              <ContentPresenter Margin="{TemplateBinding Padding}"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                ContentStringFormat="{TemplateBinding ContentStringFormat}"
+                                RecognizesAccessKey="True" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource HoverBackgroundBrush}" />
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{StaticResource SelectionBackgroundBrush}" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{StaticResource DisabledBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource DisabledTextBrush}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="TodoItemTextBlockStyle" TargetType="{x:Type TextBlock}">
+      <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+      <Setter Property="Background" Value="{StaticResource TransparentBrush}" />
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding IsDone}" Value="True">
+          <Setter Property="Foreground" Value="{StaticResource CompletedTextBrush}" />
+          <Setter Property="TextDecorations" Value="Strikethrough" />
+          <Setter Property="Opacity" Value="0.7" />
+        </DataTrigger>
+        <Trigger Property="IsEnabled" Value="False">
+          <Setter Property="Foreground" Value="{StaticResource DisabledTextBrush}" />
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+
+    <Style x:Key="TodoEmptyStateTextBlockStyle" TargetType="{x:Type TextBlock}">
+      <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+      <Setter Property="Background" Value="{StaticResource TransparentBrush}" />
+      <Style.Triggers>
+        <Trigger Property="IsEnabled" Value="False">
+          <Setter Property="Foreground" Value="{StaticResource DisabledTextBrush}" />
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+
+    <Style x:Key="TodoStatusTextBlockStyle" TargetType="{x:Type TextBlock}">
+      <Setter Property="Foreground" Value="{StaticResource StatusTextBrush}" />
+      <Setter Property="Background" Value="{StaticResource TransparentBrush}" />
+    </Style>
+
+    <Style TargetType="{x:Type ToolTip}">
+      <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+      <Setter Property="Background" Value="{StaticResource MenuBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="6,3" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type ToolTip}">
+            <Border Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                ContentStringFormat="{TemplateBinding ContentStringFormat}" />
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="TodoContextMenuStyle" TargetType="{x:Type ContextMenu}">
+      <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+      <Setter Property="Background" Value="{StaticResource MenuBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="1" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type ContextMenu}">
+            <Border Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    Padding="{TemplateBinding Padding}">
+              <StackPanel IsItemsHost="True"
+                          KeyboardNavigation.DirectionalNavigation="Cycle" />
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="TodoMenuItemStyle" TargetType="{x:Type MenuItem}">
+      <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+      <Setter Property="Background" Value="{StaticResource MenuBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource MenuBackgroundBrush}" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="6,3" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type MenuItem}">
+            <Border x:Name="MenuItemBorder"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter Content="{TemplateBinding Header}"
+                                ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                ContentStringFormat="{TemplateBinding HeaderStringFormat}"
+                                RecognizesAccessKey="True" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsHighlighted" Value="True">
+                <Setter Property="Background" Value="{StaticResource MenuHoverBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter Property="Background" Value="{StaticResource SelectionBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{StaticResource DisabledBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource DisabledTextBrush}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="TodoScrollBarPageButtonStyle" TargetType="{x:Type RepeatButton}">
+      <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+      <Setter Property="Background" Value="{StaticResource ScrollBarTrackBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ScrollBarTrackBrush}" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type RepeatButton}">
+            <Border Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" />
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource HoverBackgroundBrush}" />
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{StaticResource SelectionBackgroundBrush}" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{StaticResource DisabledBackgroundBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource DisabledTextBrush}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="TodoScrollBarLineButtonStyle" TargetType="{x:Type RepeatButton}">
+      <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+      <Setter Property="Background" Value="{StaticResource ScrollBarTrackBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ScrollBarTrackBrush}" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type RepeatButton}">
+            <Border Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}">
+              <ContentPresenter HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Content="{TemplateBinding Content}" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource HoverBackgroundBrush}" />
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{StaticResource SelectionBackgroundBrush}" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{StaticResource DisabledBackgroundBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource DisabledTextBrush}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="TodoScrollBarThumbStyle" TargetType="{x:Type Thumb}">
+      <Setter Property="Background" Value="{StaticResource ScrollBarThumbBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ScrollBarThumbBrush}" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type Thumb}">
+            <Border Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" />
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource ScrollBarThumbHoverBrush}" />
+              </Trigger>
+              <Trigger Property="IsDragging" Value="True">
+                <Setter Property="Background" Value="{StaticResource FocusBorderBrush}" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{StaticResource DisabledBackgroundBrush}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="TodoVerticalScrollBarStyle" TargetType="{x:Type ScrollBar}">
+      <Setter Property="Width" Value="{x:Static SystemParameters.VerticalScrollBarWidth}" />
+      <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+      <Setter Property="Background" Value="{StaticResource ScrollBarTrackBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type ScrollBar}">
+            <Border x:Name="ScrollBarBorder"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}">
+              <Grid>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="{x:Static SystemParameters.VerticalScrollBarButtonHeight}" />
+                  <RowDefinition Height="*" />
+                  <RowDefinition Height="{x:Static SystemParameters.VerticalScrollBarButtonHeight}" />
+                </Grid.RowDefinitions>
+
+                <RepeatButton x:Name="PART_LineUpButton"
+                              Command="{x:Static ScrollBar.LineUpCommand}"
+                              CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                              Style="{StaticResource TodoScrollBarLineButtonStyle}">
+                  <Path Data="M 3,8 L 8,3 L 13,8 Z"
+                        Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type RepeatButton}}}" />
+                </RepeatButton>
+
+                <Track x:Name="PART_Track"
+                       Grid.Row="1"
+                       IsDirectionReversed="True">
+                  <Track.DecreaseRepeatButton>
+                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}"
+                                  CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                  Style="{StaticResource TodoScrollBarPageButtonStyle}" />
+                  </Track.DecreaseRepeatButton>
+                  <Track.Thumb>
+                    <Thumb Style="{StaticResource TodoScrollBarThumbStyle}" />
+                  </Track.Thumb>
+                  <Track.IncreaseRepeatButton>
+                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}"
+                                  CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                  Style="{StaticResource TodoScrollBarPageButtonStyle}" />
+                  </Track.IncreaseRepeatButton>
+                </Track>
+
+                <RepeatButton x:Name="PART_LineDownButton"
+                              Grid.Row="2"
+                              Command="{x:Static ScrollBar.LineDownCommand}"
+                              CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                              Style="{StaticResource TodoScrollBarLineButtonStyle}">
+                  <Path Data="M 3,3 L 8,8 L 13,3 Z"
+                        Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type RepeatButton}}}" />
+                </RepeatButton>
+              </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="{StaticResource DisabledBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource DisabledTextBrush}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
     <sys:String x:Key="WindowTitleText">Desktop Todo Widget</sys:String>
     <sys:String x:Key="ExitMenuItemText">Exit</sys:String>
     <sys:String x:Key="AddTaskPlaceholderText">Add a task…</sys:String>
