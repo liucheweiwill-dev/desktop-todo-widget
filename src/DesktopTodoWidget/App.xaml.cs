@@ -24,7 +24,8 @@ public partial class App : Application
         _singleInstanceGuard = guard;
         var dataDirectory = new AppPaths().Resolve().DataDirectory;
         var placementStore = new AtomicJsonStore<WindowPlacement>(Path.Combine(dataDirectory, "window.json"));
-        var window = new MainWindow(placementStore);
+        var todoStore = new TodoDocumentStore(Path.Combine(dataDirectory, "todos.json"));
+        var window = new MainWindow(placementStore, todoStore);
         MainWindow = window;
         window.Show();
     }

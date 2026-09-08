@@ -4,7 +4,12 @@
              xmlns:sys="clr-namespace:System;assembly=mscorlib">
   <Application.Resources>
     <sys:String x:Key="WindowTitleText">Desktop Todo Widget</sys:String>
-    <sys:String x:Key="PlaceholderText">Your todos will appear here.</sys:String>
     <sys:String x:Key="ExitMenuItemText">Exit</sys:String>
+    <sys:String x:Key="AddTaskPlaceholderText">Add a task…</sys:String>
+    <sys:String x:Key="EmptyTasksText">No tasks yet.</sys:String>
+    <sys:String x:Key="DeleteTaskText">Delete task</sys:String>
+    <sys:String x:Key="DeleteButtonText">×</sys:String>
+    <sys:String x:Key="RecoveredFromBackupText">Tasks were recovered from backup.</sys:String>
+    <sys:String x:Key="ReadOnlySchemaText">This todo list was created by a newer version and is read-only.</sys:String>
   </Application.Resources>
 </Application>
