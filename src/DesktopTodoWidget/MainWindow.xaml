@@ -23,12 +23,14 @@
 
   <Grid Margin="12">
     <Grid.RowDefinitions>
-      <RowDefinition Height="Auto" />
-      <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
 
-    <Grid x:Name="TaskInputPanel">
+    <Grid x:Name="TaskInputPanel"
+          Grid.Row="2"
+          Margin="0,8,0,0">
       <TextBox x:Name="NewTaskTextBox"
                Style="{StaticResource TodoTextBoxStyle}"
                MinHeight="30"
@@ -54,8 +56,7 @@
                Visibility="Collapsed" />
 
     <Grid x:Name="TaskListPanel"
-          Grid.Row="2"
-          Margin="0,10,0,0">
+          Grid.Row="0">
       <ScrollViewer VerticalScrollBarVisibility="Auto"
                     HorizontalScrollBarVisibility="Disabled"
                     Background="{StaticResource WindowBackgroundBrush}"
