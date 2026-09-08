@@ -637,6 +637,58 @@ public partial class MainWindow : Window
         }
     }
 
+    private void TodoItemStyleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: Popup popup })
+        {
+            CancelItemDrag();
+            popup.IsOpen = !popup.IsOpen;
+        }
+    }
+
+    private void TodoItemStylePopup_Opened(object? sender, EventArgs e)
+    {
+        CancelItemDrag();
+    }
+
+    private void TodoItemStylePopup_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        // The popup is outside the item visual tree, but always cancel an active drag before its controls act.
+        CancelItemDrag();
+    }
+
+    private void DecreaseTodoItemFontSizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: TodoListItemViewModel item })
+        {
+            _todoList.SetFontSize(item, item.EffectiveFontSize - 1);
+        }
+    }
+
+    private void IncreaseTodoItemFontSizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: TodoListItemViewModel item })
+        {
+            _todoList.SetFontSize(item, item.EffectiveFontSize + 1);
+        }
+    }
+
+    private void TodoItemColorButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: TodoListItemViewModel item, Tag: string colorKey })
+        {
+            _todoList.SetColorKey(item, colorKey);
+        }
+    }
+
+    private void ResetTodoItemStyleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: TodoListItemViewModel item })
+        {
+            _todoList.ResetStyle(item);
+        }
+    }
+
     private void TodoItemTextButton_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is not Button { DataContext: TodoListItemViewModel item })

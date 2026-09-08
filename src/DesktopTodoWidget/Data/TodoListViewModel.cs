@@ -8,6 +8,22 @@ namespace DesktopTodoWidget.Data;
 public sealed class TodoListViewModel : INotifyPropertyChanged
 {
     public const int MaximumTextLength = 500;
+    public const double MinimumFontSize = 10;
+    public const double DefaultFontSize = 13;
+    public const double MaximumFontSize = 28;
+    public const string DefaultColorKey = "default";
+
+    public static IReadOnlyList<string> ColorKeys { get; } = Array.AsReadOnly(new[]
+    {
+        DefaultColorKey,
+        "yellow",
+        "orange",
+        "red",
+        "green",
+        "blue",
+        "purple",
+        "grey"
+    });
 
     private readonly Action? _onChanged;
 
@@ -149,6 +165,49 @@ public sealed class TodoListViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(EditingItem));
     }
 
+    public bool SetFontSize(TodoListItemViewModel item, double? fontSize)
+    {
+        if (item is null || !Items.Contains(item))
+        {
+            return false;
+        }
+
+        if (!item.SetFontSize(NormalizeFontSize(fontSize)))
+        {
+            return false;
+        }
+
+        NotifyChanged();
+        return true;
+    }
+
+    public bool SetColorKey(TodoListItemViewModel item, string? colorKey)
+    {
+        if (item is null || !Items.Contains(item))
+        {
+            return false;
+        }
+
+        if (!item.SetColorKey(NormalizeColorKey(colorKey)))
+        {
+            return false;
+        }
+
+        NotifyChanged();
+        return true;
+    }
+
+    public bool ResetStyle(TodoListItemViewModel item)
+    {
+        if (item is null || !Items.Contains(item) || !item.ResetStyle())
+        {
+            return false;
+        }
+
+        NotifyChanged();
+        return true;
+    }
+
     public TodoDocument CreateDocument()
     {
         return new TodoDocument
@@ -163,6 +222,28 @@ public sealed class TodoListViewModel : INotifyPropertyChanged
         return trimmedText.Length <= MaximumTextLength
             ? trimmedText
             : trimmedText[..MaximumTextLength];
+    }
+
+    internal static double? NormalizeFontSize(double? fontSize)
+    {
+        if (fontSize is not { } value || double.IsNaN(value))
+        {
+            return null;
+        }
+
+        return Math.Clamp(value, MinimumFontSize, MaximumFontSize);
+    }
+
+    internal static string? NormalizeColorKey(string? colorKey)
+    {
+        if (string.Equals(colorKey, DefaultColorKey, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return colorKey is not null && ColorKeys.Contains(colorKey, StringComparer.Ordinal)
+            ? colorKey
+            : null;
     }
 
     private void Items_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -188,6 +269,8 @@ public sealed class TodoListItemViewModel : INotifyPropertyChanged
     private bool _isDone;
     private bool _isEditing;
     private string _editingText = string.Empty;
+    private double? _fontSize;
+    private string? _colorKey;
 
     internal TodoListItemViewModel(TodoItem item)
     {
@@ -197,6 +280,8 @@ public sealed class TodoListItemViewModel : INotifyPropertyChanged
         _text = item.Text ?? string.Empty;
         _isDone = item.IsDone;
         CreatedUtc = item.CreatedUtc;
+        _fontSize = TodoListViewModel.NormalizeFontSize(item.FontSize);
+        _colorKey = TodoListViewModel.NormalizeColorKey(item.ColorKey);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -208,6 +293,14 @@ public sealed class TodoListItemViewModel : INotifyPropertyChanged
     public bool IsDone => _isDone;
 
     public DateTimeOffset CreatedUtc { get; }
+
+    public double? FontSize => _fontSize;
+
+    public double EffectiveFontSize => FontSize ?? TodoListViewModel.DefaultFontSize;
+
+    public string? ColorKey => _colorKey;
+
+    public string EffectiveColorKey => ColorKey ?? TodoListViewModel.DefaultColorKey;
 
     public bool IsEditing => _isEditing;
 
@@ -249,6 +342,39 @@ public sealed class TodoListItemViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(IsDone));
     }
 
+    internal bool SetFontSize(double? fontSize)
+    {
+        if (_fontSize == fontSize)
+        {
+            return false;
+        }
+
+        _fontSize = fontSize;
+        OnPropertyChanged(nameof(FontSize));
+        OnPropertyChanged(nameof(EffectiveFontSize));
+        return true;
+    }
+
+    internal bool SetColorKey(string? colorKey)
+    {
+        if (string.Equals(_colorKey, colorKey, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        _colorKey = colorKey;
+        OnPropertyChanged(nameof(ColorKey));
+        OnPropertyChanged(nameof(EffectiveColorKey));
+        return true;
+    }
+
+    internal bool ResetStyle()
+    {
+        var fontSizeChanged = SetFontSize(null);
+        var colorKeyChanged = SetColorKey(null);
+        return fontSizeChanged || colorKeyChanged;
+    }
+
     internal void BeginEditing()
     {
         EditingText = Text;
@@ -280,7 +406,9 @@ public sealed class TodoListItemViewModel : INotifyPropertyChanged
             Id = Id,
             Text = Text,
             IsDone = IsDone,
-            CreatedUtc = CreatedUtc
+            CreatedUtc = CreatedUtc,
+            FontSize = FontSize,
+            ColorKey = ColorKey
         };
     }
 

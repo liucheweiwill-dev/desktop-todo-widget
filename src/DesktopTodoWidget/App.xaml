@@ -22,6 +22,14 @@
     <SolidColorBrush x:Key="DisabledBackgroundBrush" Color="#202020" />
     <SolidColorBrush x:Key="StatusTextBrush" Color="#F0B45B" />
     <SolidColorBrush x:Key="TransparentBrush" Color="Transparent" />
+    <SolidColorBrush x:Key="TodoColorDefaultBrush" Color="#F2F2F2" />
+    <SolidColorBrush x:Key="TodoColorYellowBrush" Color="#FFF176" />
+    <SolidColorBrush x:Key="TodoColorOrangeBrush" Color="#FFB74D" />
+    <SolidColorBrush x:Key="TodoColorRedBrush" Color="#FFAB91" />
+    <SolidColorBrush x:Key="TodoColorGreenBrush" Color="#A5D6A7" />
+    <SolidColorBrush x:Key="TodoColorBlueBrush" Color="#81D4FA" />
+    <SolidColorBrush x:Key="TodoColorPurpleBrush" Color="#E1BEE7" />
+    <SolidColorBrush x:Key="TodoColorGreyBrush" Color="#BDBDBD" />
 
     <Style x:Key="TodoTextBoxStyle" TargetType="{x:Type TextBox}">
       <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
@@ -213,12 +221,64 @@
       </Setter>
     </Style>
 
+    <Style x:Key="TodoColorSwatchButtonStyle" TargetType="{x:Type Button}">
+      <Setter Property="Width" Value="18" />
+      <Setter Property="Height" Value="18" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="BorderBrush" Value="{StaticResource InputBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type Button}">
+            <Border x:Name="ColorSwatchBorder"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="9" />
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="ColorSwatchBorder" Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="ColorSwatchBorder" Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="ColorSwatchBorder" Property="Background" Value="{StaticResource DisabledBackgroundBrush}" />
+                <Setter TargetName="ColorSwatchBorder" Property="BorderBrush" Value="{StaticResource DividerBrush}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
     <Style x:Key="TodoItemTextBlockStyle" TargetType="{x:Type TextBlock}">
-      <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource TodoColorDefaultBrush}" />
       <Setter Property="Background" Value="{StaticResource TransparentBrush}" />
       <Style.Triggers>
+        <DataTrigger Binding="{Binding EffectiveColorKey}" Value="yellow">
+          <Setter Property="Foreground" Value="{StaticResource TodoColorYellowBrush}" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding EffectiveColorKey}" Value="orange">
+          <Setter Property="Foreground" Value="{StaticResource TodoColorOrangeBrush}" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding EffectiveColorKey}" Value="red">
+          <Setter Property="Foreground" Value="{StaticResource TodoColorRedBrush}" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding EffectiveColorKey}" Value="green">
+          <Setter Property="Foreground" Value="{StaticResource TodoColorGreenBrush}" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding EffectiveColorKey}" Value="blue">
+          <Setter Property="Foreground" Value="{StaticResource TodoColorBlueBrush}" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding EffectiveColorKey}" Value="purple">
+          <Setter Property="Foreground" Value="{StaticResource TodoColorPurpleBrush}" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding EffectiveColorKey}" Value="grey">
+          <Setter Property="Foreground" Value="{StaticResource TodoColorGreyBrush}" />
+        </DataTrigger>
         <DataTrigger Binding="{Binding IsDone}" Value="True">
-          <Setter Property="Foreground" Value="{StaticResource CompletedTextBrush}" />
           <Setter Property="TextDecorations" Value="Strikethrough" />
           <Setter Property="Opacity" Value="0.7" />
         </DataTrigger>
@@ -490,6 +550,22 @@
     <sys:String x:Key="EmptyTasksText">No tasks yet.</sys:String>
     <sys:String x:Key="DeleteTaskText">Delete task</sys:String>
     <sys:String x:Key="DeleteButtonText">×</sys:String>
+    <sys:String x:Key="TaskSettingsText">Task settings</sys:String>
+    <sys:String x:Key="TaskSettingsButtonText">⚙</sys:String>
+    <sys:String x:Key="TextSizeText">Text size</sys:String>
+    <sys:String x:Key="DecreaseFontSizeButtonText">−</sys:String>
+    <sys:String x:Key="DecreaseFontSizeText">Decrease font size</sys:String>
+    <sys:String x:Key="IncreaseFontSizeButtonText">+</sys:String>
+    <sys:String x:Key="IncreaseFontSizeText">Increase font size</sys:String>
+    <sys:String x:Key="ResetStyleText">Reset</sys:String>
+    <sys:String x:Key="DefaultColorText">Default color</sys:String>
+    <sys:String x:Key="YellowColorText">Yellow</sys:String>
+    <sys:String x:Key="OrangeColorText">Orange</sys:String>
+    <sys:String x:Key="RedColorText">Red</sys:String>
+    <sys:String x:Key="GreenColorText">Green</sys:String>
+    <sys:String x:Key="BlueColorText">Blue</sys:String>
+    <sys:String x:Key="PurpleColorText">Purple</sys:String>
+    <sys:String x:Key="GreyColorText">Grey</sys:String>
     <sys:String x:Key="RecoveredFromBackupText">Tasks were recovered from backup.</sys:String>
     <sys:String x:Key="ReadOnlySchemaText">This todo list was created by a newer version and is read-only.</sys:String>
   </Application.Resources>

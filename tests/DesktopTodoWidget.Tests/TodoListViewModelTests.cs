@@ -220,6 +220,108 @@ public sealed class TodoListViewModelTests
         Assert.Equal(4, notificationCount);
     }
 
+    [Fact]
+    public void SetFontSize_withinRange_preservesTheValue()
+    {
+        var viewModel = new TodoListViewModel([CreateItem("Task")]);
+        var item = Assert.Single(viewModel.Items);
+
+        var wasChanged = viewModel.SetFontSize(item, 18);
+
+        Assert.True(wasChanged);
+        Assert.Equal(18, item.FontSize);
+    }
+
+    [Theory]
+    [InlineData(9, TodoListViewModel.MinimumFontSize)]
+    [InlineData(29, TodoListViewModel.MaximumFontSize)]
+    public void SetFontSize_outsideRange_clampsWithoutThrowing(double requestedFontSize, double expectedFontSize)
+    {
+        var viewModel = new TodoListViewModel([CreateItem("Task")]);
+        var item = Assert.Single(viewModel.Items);
+
+        var exception = Record.Exception(() => viewModel.SetFontSize(item, requestedFontSize));
+
+        Assert.Null(exception);
+        Assert.Equal(expectedFontSize, item.FontSize);
+    }
+
+    [Fact]
+    public void SetColorKey_supportedKey_preservesTheValue()
+    {
+        var viewModel = new TodoListViewModel([CreateItem("Task")]);
+        var item = Assert.Single(viewModel.Items);
+
+        var wasChanged = viewModel.SetColorKey(item, "yellow");
+
+        Assert.True(wasChanged);
+        Assert.Equal("yellow", item.ColorKey);
+        Assert.Equal("yellow", item.EffectiveColorKey);
+    }
+
+    [Fact]
+    public void SetColorKey_unknownKey_fallsBackToDefaultWithoutThrowing()
+    {
+        var viewModel = new TodoListViewModel([CreateItem("Task")]);
+        var item = Assert.Single(viewModel.Items);
+        viewModel.SetColorKey(item, "yellow");
+
+        var exception = Record.Exception(() => viewModel.SetColorKey(item, "future-colour"));
+
+        Assert.Null(exception);
+        Assert.Null(item.ColorKey);
+        Assert.Equal(TodoListViewModel.DefaultColorKey, item.EffectiveColorKey);
+    }
+
+    [Fact]
+    public void InitialUnknownColorKey_fallsBackToDefault()
+    {
+        var viewModel = new TodoListViewModel(
+        [
+            new TodoItem
+            {
+                Id = Guid.NewGuid(),
+                Text = "Task",
+                CreatedUtc = DateTimeOffset.UtcNow,
+                ColorKey = "future-colour"
+            }
+        ]);
+
+        var item = Assert.Single(viewModel.Items);
+
+        Assert.Null(item.ColorKey);
+        Assert.Equal(TodoListViewModel.DefaultColorKey, item.EffectiveColorKey);
+    }
+
+    [Fact]
+    public void ResetStyle_clearsBothStyleFields()
+    {
+        var viewModel = new TodoListViewModel([CreateItem("Task")]);
+        var item = Assert.Single(viewModel.Items);
+        viewModel.SetFontSize(item, 18);
+        viewModel.SetColorKey(item, "orange");
+
+        var wasChanged = viewModel.ResetStyle(item);
+
+        Assert.True(wasChanged);
+        Assert.Null(item.FontSize);
+        Assert.Null(item.ColorKey);
+    }
+
+    [Fact]
+    public void StyleMutations_notifyTheInjectedPersistenceCallback()
+    {
+        var notificationCount = 0;
+        var viewModel = new TodoListViewModel([CreateItem("Task")], () => notificationCount++);
+        var item = Assert.Single(viewModel.Items);
+
+        viewModel.SetFontSize(item, 18);
+        viewModel.SetColorKey(item, "orange");
+        viewModel.ResetStyle(item);
+
+        Assert.Equal(3, notificationCount);
+    }
+
     private static TodoItem CreateItem(string text, bool isDone = false)
     {
         return new TodoItem

@@ -91,6 +91,7 @@
                   <ColumnDefinition Width="Auto" />
                   <ColumnDefinition Width="*" />
                   <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <CheckBox Grid.Column="0"
@@ -119,6 +120,7 @@
                       </Style>
                     </Button.Style>
                     <TextBlock Text="{Binding Text}"
+                               FontSize="{Binding EffectiveFontSize}"
                                TextWrapping="Wrap"
                                Style="{StaticResource TodoItemTextBlockStyle}" />
                   </Button>
@@ -142,7 +144,196 @@
                   </TextBox>
                 </Grid>
 
-                <Button Grid.Column="2"
+                <Grid Grid.Column="2"
+                      Margin="8,0,0,0"
+                      VerticalAlignment="Center">
+                  <Button x:Name="TodoItemStyleButton"
+                          Style="{StaticResource TodoDeleteButtonStyle}"
+                          Padding="5,0"
+                          ToolTip="{DynamicResource TaskSettingsText}"
+                          Content="{DynamicResource TaskSettingsButtonText}"
+                          Tag="{Binding ElementName=TodoItemStylePopup}"
+                          Click="TodoItemStyleButton_Click" />
+
+                  <Popup x:Name="TodoItemStylePopup"
+                         AllowsTransparency="False"
+                         DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+                         Placement="Bottom"
+                         PlacementTarget="{Binding ElementName=TodoItemStyleButton}"
+                         PopupAnimation="Fade"
+                         StaysOpen="False"
+                         Opened="TodoItemStylePopup_Opened"
+                         PreviewMouseLeftButtonDown="TodoItemStylePopup_PreviewMouseLeftButtonDown">
+                    <Border Margin="0,4,0,0"
+                            Padding="8"
+                            Background="{StaticResource MenuBackgroundBrush}"
+                            BorderBrush="{StaticResource DividerBrush}"
+                            BorderThickness="1">
+                      <StackPanel>
+                        <TextBlock Text="{DynamicResource TextSizeText}"
+                                   Foreground="{StaticResource SecondaryTextBrush}"
+                                   Margin="0,0,0,4" />
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,0,0,8">
+                          <Button Style="{StaticResource TodoDeleteButtonStyle}"
+                                  Padding="6,1"
+                                  ToolTip="{DynamicResource DecreaseFontSizeText}"
+                                  Content="{DynamicResource DecreaseFontSizeButtonText}"
+                                  Click="DecreaseTodoItemFontSizeButton_Click" />
+                          <TextBlock Width="32"
+                                     VerticalAlignment="Center"
+                                     HorizontalAlignment="Center"
+                                     TextAlignment="Center"
+                                     Text="{Binding EffectiveFontSize, StringFormat={}{0:0.##}}" />
+                          <Button Style="{StaticResource TodoDeleteButtonStyle}"
+                                  Padding="6,1"
+                                  ToolTip="{DynamicResource IncreaseFontSizeText}"
+                                  Content="{DynamicResource IncreaseFontSizeButtonText}"
+                                  Click="IncreaseTodoItemFontSizeButton_Click" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,0,0,8">
+                          <Button Tag="default"
+                                  Background="{StaticResource TodoColorDefaultBrush}"
+                                  ToolTip="{DynamicResource DefaultColorText}"
+                                  Click="TodoItemColorButton_Click">
+                            <Button.Style>
+                              <Style TargetType="{x:Type Button}" BasedOn="{StaticResource TodoColorSwatchButtonStyle}">
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding EffectiveColorKey}" Value="default">
+                                    <Setter Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+                                    <Setter Property="BorderThickness" Value="2" />
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </Button.Style>
+                          </Button>
+                          <Button Tag="yellow"
+                                  Margin="4,0,0,0"
+                                  Background="{StaticResource TodoColorYellowBrush}"
+                                  ToolTip="{DynamicResource YellowColorText}"
+                                  Click="TodoItemColorButton_Click">
+                            <Button.Style>
+                              <Style TargetType="{x:Type Button}" BasedOn="{StaticResource TodoColorSwatchButtonStyle}">
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding EffectiveColorKey}" Value="yellow">
+                                    <Setter Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+                                    <Setter Property="BorderThickness" Value="2" />
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </Button.Style>
+                          </Button>
+                          <Button Tag="orange"
+                                  Margin="4,0,0,0"
+                                  Background="{StaticResource TodoColorOrangeBrush}"
+                                  ToolTip="{DynamicResource OrangeColorText}"
+                                  Click="TodoItemColorButton_Click">
+                            <Button.Style>
+                              <Style TargetType="{x:Type Button}" BasedOn="{StaticResource TodoColorSwatchButtonStyle}">
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding EffectiveColorKey}" Value="orange">
+                                    <Setter Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+                                    <Setter Property="BorderThickness" Value="2" />
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </Button.Style>
+                          </Button>
+                          <Button Tag="red"
+                                  Margin="4,0,0,0"
+                                  Background="{StaticResource TodoColorRedBrush}"
+                                  ToolTip="{DynamicResource RedColorText}"
+                                  Click="TodoItemColorButton_Click">
+                            <Button.Style>
+                              <Style TargetType="{x:Type Button}" BasedOn="{StaticResource TodoColorSwatchButtonStyle}">
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding EffectiveColorKey}" Value="red">
+                                    <Setter Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+                                    <Setter Property="BorderThickness" Value="2" />
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </Button.Style>
+                          </Button>
+                          <Button Tag="green"
+                                  Margin="4,0,0,0"
+                                  Background="{StaticResource TodoColorGreenBrush}"
+                                  ToolTip="{DynamicResource GreenColorText}"
+                                  Click="TodoItemColorButton_Click">
+                            <Button.Style>
+                              <Style TargetType="{x:Type Button}" BasedOn="{StaticResource TodoColorSwatchButtonStyle}">
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding EffectiveColorKey}" Value="green">
+                                    <Setter Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+                                    <Setter Property="BorderThickness" Value="2" />
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </Button.Style>
+                          </Button>
+                          <Button Tag="blue"
+                                  Margin="4,0,0,0"
+                                  Background="{StaticResource TodoColorBlueBrush}"
+                                  ToolTip="{DynamicResource BlueColorText}"
+                                  Click="TodoItemColorButton_Click">
+                            <Button.Style>
+                              <Style TargetType="{x:Type Button}" BasedOn="{StaticResource TodoColorSwatchButtonStyle}">
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding EffectiveColorKey}" Value="blue">
+                                    <Setter Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+                                    <Setter Property="BorderThickness" Value="2" />
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </Button.Style>
+                          </Button>
+                          <Button Tag="purple"
+                                  Margin="4,0,0,0"
+                                  Background="{StaticResource TodoColorPurpleBrush}"
+                                  ToolTip="{DynamicResource PurpleColorText}"
+                                  Click="TodoItemColorButton_Click">
+                            <Button.Style>
+                              <Style TargetType="{x:Type Button}" BasedOn="{StaticResource TodoColorSwatchButtonStyle}">
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding EffectiveColorKey}" Value="purple">
+                                    <Setter Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+                                    <Setter Property="BorderThickness" Value="2" />
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </Button.Style>
+                          </Button>
+                          <Button Tag="grey"
+                                  Margin="4,0,0,0"
+                                  Background="{StaticResource TodoColorGreyBrush}"
+                                  ToolTip="{DynamicResource GreyColorText}"
+                                  Click="TodoItemColorButton_Click">
+                            <Button.Style>
+                              <Style TargetType="{x:Type Button}" BasedOn="{StaticResource TodoColorSwatchButtonStyle}">
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding EffectiveColorKey}" Value="grey">
+                                    <Setter Property="BorderBrush" Value="{StaticResource FocusBorderBrush}" />
+                                    <Setter Property="BorderThickness" Value="2" />
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </Button.Style>
+                          </Button>
+                        </StackPanel>
+
+                        <Button Style="{StaticResource TodoDeleteButtonStyle}"
+                                Padding="6,2"
+                                HorizontalAlignment="Left"
+                                Content="{DynamicResource ResetStyleText}"
+                                Click="ResetTodoItemStyleButton_Click" />
+                      </StackPanel>
+                    </Border>
+                  </Popup>
+                </Grid>
+
+                <Button Grid.Column="3"
                         Style="{StaticResource TodoDeleteButtonStyle}"
                         Margin="8,0,0,0"
                         Padding="5,0"

@@ -9,7 +9,7 @@ namespace DesktopTodoWidget.Tests;
 public sealed class TodoModelsTests
 {
     [Fact]
-    public void Write_andRead_preserveItemsAndTheirArrayOrder()
+    public void Write_andRead_preserveItemStylesAndTheirArrayOrder()
     {
         using var temporaryDirectory = new TemporaryDirectory();
         var filePath = temporaryDirectory.GetPath("todos.json");
@@ -18,8 +18,8 @@ public sealed class TodoModelsTests
         {
             Items =
             [
-                CreateItem("First", isDone: false, "2026-09-07T01:02:03+00:00"),
-                CreateItem("Second", isDone: true, "2026-09-07T04:05:06+00:00")
+                CreateItem("First", isDone: false, "2026-09-07T01:02:03+00:00", fontSize: 18, colorKey: "yellow"),
+                CreateItem("Second", isDone: true, "2026-09-07T04:05:06+00:00", fontSize: 12, colorKey: "purple")
             ]
         };
 
@@ -53,14 +53,14 @@ public sealed class TodoModelsTests
         using var temporaryDirectory = new TemporaryDirectory();
         var filePath = temporaryDirectory.GetPath("todos.json");
         var originalBytes = Encoding.UTF8.GetBytes(
-            "{\"schemaVersion\":2,\"items\":[{\"id\":\"d3b07384-d9a0-4b8e-8d2f-0ecf3e0c9e12\",\"text\":\"Newer version\",\"isDone\":false,\"createdUtc\":\"2026-09-07T00:00:00+00:00\"}]}");
+            "{\"schemaVersion\":3,\"items\":[{\"id\":\"d3b07384-d9a0-4b8e-8d2f-0ecf3e0c9e12\",\"text\":\"Newer version\",\"isDone\":false,\"createdUtc\":\"2026-09-07T00:00:00+00:00\"}]}");
         File.WriteAllBytes(filePath, originalBytes);
         var store = new TodoDocumentStore(filePath);
         var defaultDocument = new TodoDocument { Items = [CreateItem("Default", false, "2026-09-01T00:00:00+00:00")] };
 
         var result = store.Read(defaultDocument);
 
-        Assert.Equal(2, result.UnsupportedSchemaVersion!.Value);
+        Assert.Equal(3, result.UnsupportedSchemaVersion!.Value);
         Assert.Same(defaultDocument, result.Document);
         Assert.False(result.HadInvalidData);
         Assert.Equal(originalBytes, File.ReadAllBytes(filePath));
@@ -187,14 +187,43 @@ public sealed class TodoModelsTests
         Assert.Equal(TodoDocument.CurrentSchemaVersion, result.Document.SchemaVersion);
     }
 
-    private static TodoItem CreateItem(string text, bool isDone, string createdUtc)
+    [Fact]
+    public void Read_schemaVersion1Document_migratesWithItemsAndNewStyleFieldsUnset()
+    {
+        using var temporaryDirectory = new TemporaryDirectory();
+        var filePath = temporaryDirectory.GetPath("todos.json");
+        File.WriteAllText(
+            filePath,
+            "{\"schemaVersion\":1,\"items\":[{\"id\":\"8a21d190-a19d-4bbd-8f2d-8bb0c9f1d8a0\",\"text\":\"First legacy task\",\"isDone\":false,\"createdUtc\":\"2026-09-07T00:00:00+00:00\"},{\"id\":\"2e59bc48-309d-4b94-9bdc-4a2b52a8b515\",\"text\":\"Second legacy task\",\"isDone\":true,\"createdUtc\":\"2026-09-07T00:00:01+00:00\"}]}");
+        var store = new TodoDocumentStore(filePath);
+
+        var result = store.Read(new TodoDocument());
+
+        Assert.Null(result.UnsupportedSchemaVersion);
+        Assert.Equal(TodoDocument.CurrentSchemaVersion, result.Document.SchemaVersion);
+        Assert.Equal(["First legacy task", "Second legacy task"], result.Document.Items.Select(item => item.Text));
+        Assert.All(result.Document.Items, item =>
+        {
+            Assert.Null(item.FontSize);
+            Assert.Null(item.ColorKey);
+        });
+    }
+
+    private static TodoItem CreateItem(
+        string text,
+        bool isDone,
+        string createdUtc,
+        double? fontSize = null,
+        string? colorKey = null)
     {
         return new TodoItem
         {
             Id = Guid.NewGuid(),
             Text = text,
             IsDone = isDone,
-            CreatedUtc = DateTimeOffset.Parse(createdUtc)
+            CreatedUtc = DateTimeOffset.Parse(createdUtc),
+            FontSize = fontSize,
+            ColorKey = colorKey
         };
     }
 
@@ -207,6 +236,8 @@ public sealed class TodoModelsTests
             Assert.Equal(expected[index].Text, actual[index].Text);
             Assert.Equal(expected[index].IsDone, actual[index].IsDone);
             Assert.Equal(expected[index].CreatedUtc, actual[index].CreatedUtc);
+            Assert.Equal(expected[index].FontSize, actual[index].FontSize);
+            Assert.Equal(expected[index].ColorKey, actual[index].ColorKey);
         }
     }
 

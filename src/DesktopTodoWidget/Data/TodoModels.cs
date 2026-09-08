@@ -6,7 +6,7 @@ namespace DesktopTodoWidget.Data;
 
 public sealed class TodoDocument
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     [JsonPropertyName("schemaVersion")]
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
@@ -28,6 +28,12 @@ public sealed class TodoItem
 
     [JsonPropertyName("createdUtc")]
     public DateTimeOffset CreatedUtc { get; set; }
+
+    [JsonPropertyName("fontSize")]
+    public double? FontSize { get; set; }
+
+    [JsonPropertyName("colorKey")]
+    public string? ColorKey { get; set; }
 }
 
 public sealed class TodoDocumentStore
@@ -100,7 +106,9 @@ public sealed class TodoDocumentStore
                         Id = item.Id,
                         Text = item.Text ?? string.Empty,
                         IsDone = item.IsDone,
-                        CreatedUtc = item.CreatedUtc
+                        CreatedUtc = item.CreatedUtc,
+                        FontSize = item.FontSize,
+                        ColorKey = item.ColorKey
                     });
                 }
             }
@@ -132,7 +140,9 @@ public sealed class TodoDocumentStore
                         Id = itemData.Id ?? Guid.Empty,
                         Text = itemData.Text ?? string.Empty,
                         IsDone = itemData.IsDone ?? false,
-                        CreatedUtc = itemData.CreatedUtc ?? default
+                        CreatedUtc = itemData.CreatedUtc ?? default,
+                        FontSize = itemData.FontSize,
+                        ColorKey = itemData.ColorKey
                     });
                 }
             }
@@ -159,7 +169,7 @@ public sealed class TodoDocumentStore
             return;
         }
 
-        // Version 1 introduced the initial document shape, so older documents need no field transform.
+        // Version 2 added optional item style fields. Older documents naturally use null for both fields.
         // Future migrations are added here before the schema version is advanced.
         document.SchemaVersion = TodoDocument.CurrentSchemaVersion;
     }
@@ -225,4 +235,10 @@ internal sealed class TodoItemData
 
     [JsonPropertyName("createdUtc")]
     public DateTimeOffset? CreatedUtc { get; set; }
+
+    [JsonPropertyName("fontSize")]
+    public double? FontSize { get; set; }
+
+    [JsonPropertyName("colorKey")]
+    public string? ColorKey { get; set; }
 }
