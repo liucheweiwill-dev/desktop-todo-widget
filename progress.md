@@ -1,151 +1,184 @@
 # Progress
 
-## 現況總覽（2026-09-07）
+## 現況總覽（2026-09-08）
 
 | | |
 |---|---|
-| 語言 / UI | C# / .NET 10 / WPF，`win-x64` self-contained |
-| 測試 | **25 passed / 0 failed** |
-| 發佈體積 | 141MB（未壓縮，self-contained） |
-| 依賴 | 主專案 **0 個 NuGet 套件**；測試專案 xUnit（不隨成品出貨） |
+| 技術 | C# / .NET 10 / WPF，`win-x64` self-contained |
+| 測試 | **60 passed / 0 failed** |
+| 建置 | 零錯誤零警告 |
+| 發佈體積 | 141MB（未壓縮） |
+| 依賴 | 主專案 **0 個 NuGet 套件**；測試專案 xUnit（不出貨） |
 | 端機需求 | 無——不需 .NET Runtime、VC++ Redist、WebView2 |
+| 最新 commit | `472f43d` |
+| 發佈檔 | `publish\DesktopTodoWidget.exe`（可直接執行） |
+| 資料位置 | `%LOCALAPPDATA%\DesktopTodoWidget\`（`todos.json`、`window.json`，各有 `.bak`） |
+
+**功能已全部完成，只剩打包（P1）。**
 
 ## 階段狀態
 
-| 階段 | 內容 | 狀態 |
-|---|---|---|
-| **S1** | 桌面附著 spike | **自動化部分完成，等待人工驗證** |
-| **D1a** | 路徑解析、原子 JSON 儲存 | **完成**（11 tests，含 mutation probe） |
-| **D1b** | Todo 模型、schema 版本、單一實例 | **完成**（14 tests，含 mutation probe） |
-| W1 | 視窗外殼 | **被 S1 人工驗證阻擋** |
-| U1 / R1 / P1 | Todo UI / 拖曳排序 / 打包 | 未開始 |
+| 階段 | 內容 | 狀態 | commit |
+|---|---|---|---|
+| S1 | 桌面附著 spike | **完成，結論：workerw 不可交付並移除** | `2ec3f73` `8168af6` |
+| D1a | 路徑解析、原子 JSON 儲存 | **完成**（11 tests + mutation probe） | `2ec3f73` |
+| D1b | Todo 模型、schema 版本、單一實例 | **完成**（14 tests + mutation probe） | `2ec3f73` |
+| W1 | 視窗外殼、拖曳移動、位置持久化 | **完成**（人工 M1–M7 全過） | `de92869` `4fcf5f2` |
+| W1b | 消除拖曳閃爍 | **完成** | `e4432db` |
+| U1 | Todo UI：新增／刪除／勾選／編輯 | **完成**（人工 U-1～U-8 全過） | `c99e830` |
+| U1b | 深色主題貫穿控制項 | **完成** | `047176e` |
+| U1c | 選取反白可讀 + 輸入框移到底部 | **完成** | `17ef33f` |
+| R1 | 拖曳排序 | **完成**（人工 D1–D9 全過） | `eb6371b` |
+| U2 | 每項字型大小與顏色 | **完成**（部分人工驗收未回報，見下） | `81db465` |
+| U2b | 色票重調（分辨度） | **完成** | `472f43d` |
+| **P1** | **打包** | **未開始，待使用者拍板形態** | — |
 
 ---
 
-## S1 — 桌面附著 spike（自動化部分）
+## S1 的結論（最重要的架構事實）
 
-### 已通過
+**`workerw` 不可交付，已從產品移除。`bottommost` 是唯一模式。**
 
-| # | 驗收 | 結果 |
-|---|---|---|
-| A1 | `dotnet build -c Release` | 0 錯誤 0 警告 |
-| A2 | `src/` 無 `HttpClient`／`WebClient`／`Socket`／`WebView` | 零命中 |
-| A3 | P/Invoke 只在 `Interop/DesktopAttach.cs` | 15 個宣告全部在該檔 |
-| A4 | `dotnet publish --self-contained` | 成功，141MB |
+兩個 target 實測都失敗：按鈕點不動、無法輸入，`--target=workerw` **連 Esc 都收不到**。
+根因是**桌面圖示層（`SHELLDLL_DefView`）攔走全部輸入**——不是選錯層。
+該技術幾乎只被用於動態桌布，正因為桌布不需要互動。
 
-### 實測拿到的早期證據
+外加獨立缺陷：**行程結束後殘影留在桌布上**，使用者無從判斷程式是否還在跑。
 
-以發佈檔實跑三種模式，`spike.log` 顯示：
+### 誠實的能力邊界（不要在後續階段悄悄改口）
 
-```
-windowsBuild=19045
-啟動時 dpiAwareness=1 monitorDpi=96
---target=progman  → SetParent success=True  parent=0x101FC (Progman)
---target=workerw  → SetParent success=True  parent=0x3907A8 (WorkerW)
-style 0x6080000 → 0x46080000    （WS_CHILD 正確加上）
-dpiAwareness 1 → 2               （跨行程 SetParent 改變了 DPI awareness）
-```
+**原始需求「嵌入 Windows 桌面像個 widget」無法達成**，
+而且不是實作品質問題——**Windows 沒有提供可互動的桌面層 API**。
 
-**兩種選層都能成功附著**，三步驟契約（Progman → `0x052C` → `SHELLDLL_DefView` host
-→ 下一個 `WorkerW`）可用。
+實際交付：無邊框、不在 Alt+Tab、**不會浮到最上層**的常駐視窗。
+與真 widget 的差別是 **Win+D 顯示桌面時它會跟著被蓋掉**。
 
-**`dpiAwareness` 由 1 變 2 是 findings.md R2 預測的風險，現在有實證。**
-E4（混合 DPI 多螢幕）要特別注意這件事的後果。
-
-### 待人工驗證
-
-E1–E8 共八項，只有在實體桌面上才能做。清單與淘汰門檻見
-`docs/s1-manual-gate.md`。其中 **E7（IME）是 `workerw` 的生死題**，
-**E8（Z-order／activation）是 `bottommost` 的生死題**。
+詳見 `findings.md` D2 與 `docs/s1-manual-gate.md`。
 
 ---
 
-## Review 抓到的缺陷
+## 目前的功能
 
-### S1：`IsWindowNative` 指向不存在的匯出（BLOCKING）
+- 頂部 24px 拖曳條（移動視窗）／清單／底部固定輸入框
+- 輸入框打字按 Enter 新增到清單尾端，焦點保留
+- 勾選 → 刪除線 + 變淡，**留在原位不重排**
+- 雙擊文字就地編輯，Enter 套用、Esc 取消
+- 每列 `×` 刪除
+- **拖曳項目重新排序**（插入指示線、邊緣自動捲動）
+- **每列 ⚙ 設定字型大小（10–28）與顏色（八色色票）**
+- 位置與所有內容持久化，關閉前同步落盤
+- 單一實例；Esc 或右鍵 `Exit` 關閉
 
-```csharp
-[DllImport("user32.dll")]              // 沒有 EntryPoint
-private static extern bool IsWindowNative(IntPtr window);
-```
+### Esc 有三個語意，優先序不可弄反
 
-user32.dll 沒有 `IsWindowNative` 這個匯出，runtime 會照受管方法名去找而擲
-`EntryPointNotFoundException`。它由 2 秒的失聯偵測 timer 呼叫，
-**workerw 附著成功後約 2 秒程式必定崩潰**——而 bottommost 模式碰不到這條路徑，
-所以不會在一般啟動時顯現。
-
-**沒有憑閱讀下判斷**：以發佈檔實跑 `--mode=workerw`，7 秒後程序已結束、
-exit code `-532462766`（`0xE0434352`，CLR 未處理例外），log 停在 `workerw attach complete`。
-修正後兩種 target 都能存活超過 8 秒。
-
-### S1：`WsPopup` sign-extend（MINOR）
-
-`private const nint WsPopup = -2147483648;` 在 x64 會 sign-extend 成
-`0xFFFFFFFF80000000`，使 `RestoreTopLevelStyle` 的 `| WsPopup` 設到無關的高位元。
-
-Codex 的修正 `unchecked((nint)0x80000000)` **本身編譯不過**（`CS0133`：
-`nint` 大小依平台而定，不是編譯期常數），由 Claude Code 改為 `static readonly`。
+**拖曳中取消拖曳 > 編輯中取消編輯 > 否則關閉視窗。**
+寫錯會在拖曳或編輯時把程式關掉，使用者剛打的字全沒。
 
 ---
 
-## 事故：Codex 在此 sandbox 內無法建置（已改變角色分工）
+## 待使用者處理
 
-即使 `--add-dir` 全給對、restore 也已預先完成，MSBuild 仍被拒絕寫入
-`obj/`（`MC1000`／`MSB4018`）與工作區內新建的 `.build-tmp/`（`MSB3491`／`MSB3191`）。
+### 1. U2 的人工驗收尚未回報
 
-**後果：Codex 交出的每一份程式碼都是未經編譯的。** 實際造成四個編譯錯誤：
+使用者只回報了色票分辨度問題（已修），下列仍未確認：
 
-| 錯誤 | 檔案 |
+| # | 測試 |
 |---|---|
-| `CS0051` 可及性不一致 | `MainWindow.xaml.cs` |
-| `CS0133` 非編譯期常數 | `DesktopAttach.cs` |
-| `CS0103` 缺 `using System.IO;` | `AppPaths.cs`、`AtomicJsonStore.cs` |
-| `CS0246` 缺 `using Xunit;` | 兩個測試檔 |
+| P1 | 點 ⚙ 出現 popup，點他處會關閉 |
+| P2 | 調大小 → 只有該列變 |
+| P4 | Reset → 回到預設 |
+| P5 | 關閉再開 → 大小與顏色都記住 |
+| **P7** | **字型調大後拖曳排序仍正常**（列高改變會影響插入線計算） |
 
-處置：角色分工調整為 **Codex 撰寫、Claude Code 建置與執行測試並回饋結果**，
-編譯錯誤由 Claude Code 直接修。詳見 findings.md D7.1，
-`CLAUDE.md` 與 `AGENTS.md` 已同步。
+### 2. P1 打包形態，需使用者拍板
 
-**這是 TDD 的實質降級**——Codex 看不到紅燈也看不到綠燈。補償方式是要求它在回報中
-明列公開簽章與對測試意圖的假設，讓 review 能在跑測試前先比對意圖。
-
-### 環境配方（findings.md D7）
-
-四種 `--add-dir` 組合逐一實測後的結論：`C:\Program Files\...` **不能加**
-（會讓 sandbox setup 失敗），使用者設定檔的三個路徑**必須加**；
-restore 一律由 Claude Code 事前在 sandbox 外完成，Codex 所有指令加 `--no-restore`。
-
----
-
-## D1a / D1b — 資料層
-
-25 個測試全數通過，且**兩個關鍵防護都做過 mutation probe**：
-
-| 防護 | 拿掉後 | 判定 |
+| | 單一 exe | 免安裝資料夾 |
 |---|---|---|
-| `AtomicJsonStore` 的首次寫入分支（`File.Exists` → `File.Move`） | 11 個測試中 5 個失敗 | 測試真的守得住 |
-| `TodoModels` 的「版本過新則拒絕載入」 | 多個測試失敗 | 測試真的守得住 |
+| 交付 | 一個檔案 | 一個資料夾 |
+| 執行時 | native DLL 解壓到 `%TEMP%\.net` | 不解壓 |
+| 體積 | 開 `EnableCompressionInSingleFile` 約 60–95MB（**待實測**） | 141MB |
 
-兩次探測後都以內容比對確認還原為 byte-identical（不是看 diffstat——等長置換不會改變它）。
-
-### 兩個刻意的設計決定
-
-**排序用陣列位置，不加 `Order` 欄位。** 多一個排序欄位就多一個真實來源，
-會產生重複索引、跳號、以及「陣列順序與欄位不一致」三種 bug。拖曳排序直接搬移元素即可。
-
-**讀到較新的 `schemaVersion` 時拒絕載入且不覆寫原檔。**
-若使用者用新版寫過資料、又用舊版開啟，靜默覆寫會直接毀掉他的待辦清單。
-測試以逐位元組比對確認原檔未被改動。
+需求原文寫「single file self-contained exe」，但也允許免安裝資料夾。
+**此決策不由實作者自行決定**（findings.md D5）。
 
 ---
 
-## 下一步
+## 開發流程的重要事實（下一個 session 必讀）
 
-**W1 被 S1 的人工驗證阻擋。** 需要在實體桌面上跑完 `docs/s1-manual-gate.md` 的 E1–E8，
-結果會決定：
+### Codex 在本機 sandbox 內無法建置
 
-- `workerw` 可交付 → 可考慮設為預設
-- `workerw` 不可交付 → **從產品移除**（不保留為「實驗選項」），走 `bottommost`
-- 兩者都不可交付 → 停下來重談「嵌入桌面」這項需求本身
+MSBuild 被拒絕寫入 `obj/` 與工作區內新建目錄，即使 `--add-dir` 全給對、
+restore 已預先完成也一樣。**後果：Codex 交出的每一份程式碼都是未經編譯的。**
 
-不論結果如何都**不要改用 Rust／Tauri／ImGui**——問題在 shell 不在語言。
+分工因此調整為：
+
+| 工作 | 誰做 |
+|---|---|
+| 撰寫實作與測試 | Codex |
+| `dotnet build` / `test` / `publish` | **Claude Code**（sandbox 外） |
+| 回饋真實結果給 Codex | Claude Code |
+| 修正編譯錯誤 | Claude Code 可直接修 |
+
+派工 prompt 必須明講「不要嘗試 build」，並要求 Codex 不得偽造測試輸出。
+詳見 `findings.md` D7.1。
+
+### 派工的可用配方
+
+```
+codex exec --sandbox workspace-write \
+  --add-dir "C:\Users\oldli\AppData\Local\Microsoft SDKs" \
+  --add-dir "C:\Users\oldli\AppData\Roaming\NuGet" \
+  --add-dir "C:\Users\oldli\.nuget" \
+  -C "D:/ai/projects/desktop-todo-widget" \
+  -o "<scratch>/<task>-report.md" "$(cat <scratch>/<task>-prompt.md)" < /dev/null
+```
+
+- **`C:\Program Files\...` 不能加**，會讓 sandbox setup 失敗
+- 所有 dotnet 指令**一律加 `--no-restore`**；restore 由 Claude Code 事前在外面做
+- prompt 寫成檔案再 `$(cat ...)` 帶入，避免中文在 shell 引號裡出事
+- `< /dev/null` 必要，否則背景執行會卡住
+
+---
+
+## Review 抓到的缺陷（Codex 無法編譯而產生）
+
+| 缺陷 | 影響 |
+|---|---|
+| `IsWindowNative` P/Invoke 指向不存在的匯出 | workerw 附著成功後 2 秒必崩潰 |
+| `CS0051` 可及性不一致、`CS0133` 非編譯期常數 | 建不起來 |
+| 缺 `using System.IO;` / `using Xunit;` | 建不起來 |
+| `IsInsideControl` 往上走訪撞到 `Window`（`Window` 繼承自 `Control`） | **整個視窗都拖不動** |
+| 為取得多螢幕而開 `UseWindowsForms` | 與 WPF 型別大量撞名 |
+| `VerticalScrollBarStyle` 屬性不存在 | 建不起來 |
+
+### 兩個「測試綠燈但功能壞掉」的險境
+
+**U2 的 schemaVersion 升版**：升到 2 時，「版本過新則拒絕載入」的測試剛好用
+`schemaVersion: 2` 當未來版本。不改的話程式會**拒絕載入自己寫的檔**，
+而測試仍是綠的（它本來就斷言「應該拒絕」）。已改用 `3` 並補 v1 遷移測試，
+且**以手寫 v2 檔實跑驗證**。
+
+**W1 的規格自相矛盾**：R5 說「重疊夠就原樣回傳」，驗收 P5 又說「視窗比螢幕大就夾到左上角」。
+實作是對的、規格錯了，已更正卡片與測試（理由寫在測試註解裡）。
+
+---
+
+## 驗證指令
+
+```
+dotnet build src/DesktopTodoWidget/DesktopTodoWidget.csproj -c Release --no-restore
+```
+
+```
+dotnet test tests/DesktopTodoWidget.Tests/DesktopTodoWidget.Tests.csproj --no-restore
+```
+
+```
+dotnet publish src/DesktopTodoWidget/DesktopTodoWidget.csproj -c Release -r win-x64 --self-contained true --no-restore -o publish
+```
+
+UI 與視窗行為不寫自動化測試（findings.md D6），走各卡片的人工驗收清單。
+
+**視覺類問題可由 Claude Code 自行截圖驗證**：以 `EnumWindows` 依 PID 找到視窗
+（`MainWindowHandle` 因 `WS_EX_TOOLWINDOW` 為 0，不可用），再用 `PrintWindow` 擷取。
+本專案的深色主題、色票、版面都是這樣驗的，不必每次都麻煩使用者。
