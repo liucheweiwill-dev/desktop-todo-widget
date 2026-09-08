@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -178,11 +179,11 @@ public partial class MainWindow : Window
         SchedulePlacementSave();
     }
 
-    private static bool IsInsideControl(DependencyObject? element)
+    private bool IsInsideControl(DependencyObject? element)
     {
-        while (element is not null)
+        while (element is not null && !ReferenceEquals(element, this))
         {
-            if (element is Control)
+            if (IsInteractiveControl(element))
             {
                 return true;
             }
@@ -191,6 +192,24 @@ public partial class MainWindow : Window
         }
 
         return false;
+    }
+
+    private static bool IsInteractiveControl(DependencyObject element)
+    {
+        return element switch
+        {
+            ToggleButton toggleButton => toggleButton.IsHitTestVisible,
+            ButtonBase => true,
+            TextBoxBase => true,
+            PasswordBox => true,
+            ComboBox => true,
+            ListBoxItem => true,
+            MenuItem => true,
+            ScrollBar => true,
+            Thumb => true,
+            Slider => true,
+            _ => false
+        };
     }
 
     private static DependencyObject? GetParent(DependencyObject element)
