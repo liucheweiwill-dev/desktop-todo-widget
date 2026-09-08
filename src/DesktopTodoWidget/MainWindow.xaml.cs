@@ -217,6 +217,11 @@ public partial class MainWindow : Window
         }
 
         var source = e.OriginalSource as DependencyObject;
+        if (IsDescendantOf(source, HelpButton) || IsDescendantOf(source, HelpPopup))
+        {
+            return;
+        }
+
         if (IsDescendantOf(source, WindowDragStrip))
         {
             MoveWindow();
@@ -637,6 +642,11 @@ public partial class MainWindow : Window
         }
     }
 
+    private void HelpButton_Click(object sender, RoutedEventArgs e)
+    {
+        HelpPopup.IsOpen = !HelpPopup.IsOpen;
+    }
+
     private void TodoItemStyleButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: Popup popup })
@@ -871,6 +881,13 @@ public partial class MainWindow : Window
         if (_isItemDragInProgress)
         {
             CancelItemDrag();
+            e.Handled = true;
+            return;
+        }
+
+        if (HelpPopup.IsOpen)
+        {
+            HelpPopup.IsOpen = false;
             e.Handled = true;
             return;
         }

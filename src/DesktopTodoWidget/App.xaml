@@ -547,6 +547,25 @@
       </Setter>
     </Style>
     <sys:String x:Key="WindowTitleText">Desktop Todo Widget</sys:String>
+    <sys:String x:Key="HelpButtonText">?</sys:String>
+    <sys:String x:Key="HelpText">How to use</sys:String>
+    <sys:String x:Key="HelpTitleText">Desktop Todo Widget</sys:String>
+    <sys:String x:Key="HelpIntroText">This is a desktop to-do widget for PC.</sys:String>
+    <sys:String x:Key="HelpTasksHeadingText">TASKS</sys:String>
+    <sys:String x:Key="HelpTasksText" xml:space="preserve">1. Type in the box at the bottom and press Enter to add a task.
+2. Click the checkbox to complete a task — it stays where it is.
+3. Double-click a task to edit it. Enter applies, Esc cancels.
+4. Click × to delete a task.
+5. Drag a task up or down to reorder it.
+6. Click ⚙ to change that task's text size and colour.</sys:String>
+    <sys:String x:Key="HelpWindowHeadingText">WINDOW</sys:String>
+    <sys:String x:Key="HelpWindowText" xml:space="preserve">1. Drag the bar at the top to move the widget.
+2. Press Esc, or right-click and choose Exit, to close it.
+3. Everything is saved automatically.</sys:String>
+    <sys:String x:Key="HelpVisibilityHeadingText">IF YOU CANNOT SEE IT</sys:String>
+    <sys:String x:Key="HelpVisibilityText" xml:space="preserve">1. The widget stays behind other windows on purpose — minimise whatever is on top of it.
+2. Win+D (show desktop) hides it too — press Win+D again.
+3. Running the program again will not help; it is already running.</sys:String>
     <sys:String x:Key="ExitMenuItemText">Exit</sys:String>
     <sys:String x:Key="AddTaskPlaceholderText">Add a task…</sys:String>
     <sys:String x:Key="EmptyTasksText">No tasks yet.</sys:String>

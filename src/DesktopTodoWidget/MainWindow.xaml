@@ -31,7 +31,72 @@
             Grid.Row="0"
             Background="{StaticResource InputBackgroundBrush}"
             BorderBrush="{StaticResource DividerBrush}"
-            BorderThickness="0,0,0,1" />
+            BorderThickness="0,0,0,1">
+      <Grid>
+        <Button x:Name="HelpButton"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                Style="{StaticResource TodoDeleteButtonStyle}"
+                Padding="5,0"
+                ToolTip="{DynamicResource HelpText}"
+                Content="{DynamicResource HelpButtonText}"
+                Click="HelpButton_Click" />
+
+        <Popup x:Name="HelpPopup"
+               AllowsTransparency="False"
+               Focusable="False"
+               Placement="Bottom"
+               PlacementTarget="{Binding ElementName=HelpButton}"
+               PopupAnimation="Fade"
+               StaysOpen="False">
+          <Border Margin="0,4,0,0"
+                  Padding="8"
+                  Background="{StaticResource MenuBackgroundBrush}"
+                  BorderBrush="{StaticResource DividerBrush}"
+                  BorderThickness="1">
+            <ScrollViewer Width="336"
+                          MaxHeight="380"
+                          Focusable="False"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+              <ScrollViewer.Resources>
+                <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource TodoVerticalScrollBarStyle}">
+                  <Setter Property="Focusable" Value="False" />
+                </Style>
+              </ScrollViewer.Resources>
+              <StackPanel>
+                <TextBlock Text="{DynamicResource HelpTitleText}"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,8" />
+                <TextBlock Text="{DynamicResource HelpIntroText}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,12" />
+                <TextBlock Text="{DynamicResource HelpTasksHeadingText}"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,4" />
+                <TextBlock Text="{DynamicResource HelpTasksText}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,12" />
+                <TextBlock Text="{DynamicResource HelpWindowHeadingText}"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,4" />
+                <TextBlock Text="{DynamicResource HelpWindowText}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,12" />
+                <TextBlock Text="{DynamicResource HelpVisibilityHeadingText}"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,4" />
+                <TextBlock Text="{DynamicResource HelpVisibilityText}"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </ScrollViewer>
+          </Border>
+        </Popup>
+      </Grid>
+    </Border>
 
     <Grid Grid.Row="1"
           Margin="12">
