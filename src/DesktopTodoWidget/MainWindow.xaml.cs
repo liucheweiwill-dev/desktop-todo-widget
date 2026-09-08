@@ -1,163 +1,122 @@
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using System.Windows.Threading;
-using System.Windows;
+using DesktopTodoWidget.Data;
 using DesktopTodoWidget.Interop;
 
 namespace DesktopTodoWidget;
 
 public partial class MainWindow : Window
 {
-    private readonly StartupOptions _options;
-    private readonly DispatcherTimer _parentCheckTimer;
-    private readonly string _logPath;
+    private const double DefaultLeft = 80;
+    private const double DefaultTop = 80;
+    private const double WindowWidth = 360;
+    private const double WindowHeight = 420;
+
+    private readonly AtomicJsonStore<WindowPlacement> _placementStore;
+    private readonly DispatcherTimer _placementSaveTimer;
     private IntPtr _windowHandle;
-    private IntPtr _workerwParent;
-    private IntPtr _lastAttachedWorkerwParent;
     private HwndSource? _windowSource;
     private HwndSourceHook? _bottommostZOrderHook;
-    private int _clickCount;
-    private int _reattachCount;
+    private bool _placementSavePending;
 
-    internal MainWindow(StartupOptions options)
+    internal MainWindow(AtomicJsonStore<WindowPlacement> placementStore)
     {
-        _options = options;
-        _logPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "DesktopTodoWidget",
-            "spike.log");
+        _placementStore = placementStore ?? throw new ArgumentNullException(nameof(placementStore));
 
         InitializeComponent();
         SourceInitialized += MainWindow_SourceInitialized;
+        Closing += MainWindow_Closing;
         Closed += MainWindow_Closed;
-
-        // Spike 的視窗無邊框、不在工作列也不在 Alt+Tab，沒有任何一般的關閉途徑。
-        // Esc 是給人工驗證用的關閉方式；用 Preview 以便 TextBox 有焦點時仍然有效。
         PreviewKeyDown += MainWindow_PreviewKeyDown;
+        PreviewMouseLeftButtonDown += MainWindow_PreviewMouseLeftButtonDown;
 
-        _parentCheckTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
-        _parentCheckTimer.Tick += ParentCheckTimer_Tick;
+        _placementSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        _placementSaveTimer.Tick += PlacementSaveTimer_Tick;
     }
 
     private void MainWindow_SourceInitialized(object? sender, EventArgs e)
     {
         _windowHandle = new WindowInteropHelper(this).Handle;
-        var dpi = DesktopAttach.GetDpiSnapshot(_windowHandle);
-        WriteLog(
-            $"startup mode={ModeName} target={TargetName} windowsBuild={Environment.OSVersion.Version.Build} " +
-            $"hwnd={DesktopAttach.FormatHandle(_windowHandle)} dpiAwareness={dpi.Awareness} monitorDpi={dpi.Dpi}");
-
-        if (_options.ParseWarning is not null)
-        {
-            WriteLog($"argument warning: {_options.ParseWarning}");
-        }
+        RestoreSavedPlacement();
 
         var toolWindowResult = DesktopAttach.ConfigureToolWindow(_windowHandle);
-        WriteLog(
-            $"tool-window style success={toolWindowResult.Success} lastError={toolWindowResult.LastError} " +
-            $"detail={toolWindowResult.Detail}");
+        Trace.WriteLine(
+            $"DesktopTodoWidget tool-window style success={toolWindowResult.Success} " +
+            $"lastError={toolWindowResult.LastError} detail={toolWindowResult.Detail}");
 
-        if (_options.Mode == AttachMode.Workerw)
-        {
-            AttachWorkerw(isReattach: false);
-        }
-        else
-        {
-            RunAsBottommost();
-        }
-    }
-
-    private void AttachWorkerw(bool isReattach)
-    {
-        if (!DesktopAttach.TryResolveDesktopParent(
-                _options.Target == WorkerwTarget.Workerw,
-                WriteLog,
-                out var parent,
-                out var resolutionFailure))
-        {
-            WorkerwFailed(resolutionFailure);
-            return;
-        }
-
-        var parentClassName = DesktopAttach.GetWindowClassName(parent);
-        WriteLog(
-            $"selected parent hwnd={DesktopAttach.FormatHandle(parent)} class={parentClassName} " +
-            $"target={TargetName}");
-
-        RemoveBottommostZOrderHook();
-
-        if (!DesktopAttach.TryAttachToParent(_windowHandle, parent, WriteLog, out var attachFailure))
-        {
-            WorkerwFailed(attachFailure);
-            return;
-        }
-
-        _workerwParent = parent;
-        _lastAttachedWorkerwParent = parent;
-        StatusText.Text = string.Format(
-            CultureInfo.InvariantCulture,
-            Ui("WorkerwAttachedStatusText"),
-            TargetName);
-        WriteLog($"workerw attach complete reattach={isReattach} parent={DesktopAttach.FormatHandle(parent)}");
-
-        if (!_parentCheckTimer.IsEnabled)
-        {
-            _parentCheckTimer.Start();
-        }
-    }
-
-    private void ParentCheckTimer_Tick(object? sender, EventArgs e)
-    {
-        if (_workerwParent == IntPtr.Zero || DesktopAttach.IsWindow(_workerwParent))
-        {
-            return;
-        }
-
-        _reattachCount++;
-        WriteLog(
-            $"workerw parent lost hwnd={DesktopAttach.FormatHandle(_workerwParent)} " +
-            $"reattachAttempt={_reattachCount}");
-        _workerwParent = IntPtr.Zero;
-        AttachWorkerw(isReattach: true);
-    }
-
-    private void WorkerwFailed(string reason)
-    {
-        WriteLog($"workerw failed reason={reason}; falling back to bottommost");
-        _workerwParent = IntPtr.Zero;
-        _parentCheckTimer.Stop();
-
-        var restoreResult = DesktopAttach.RestoreTopLevelStyle(_windowHandle);
-        WriteLog(
-            $"restore top-level success={restoreResult.Success} lastError={restoreResult.LastError} " +
-            $"detail={restoreResult.Detail}");
-        DesktopAttach.RequestDesktopRepaint(_lastAttachedWorkerwParent, WriteLog);
-        _lastAttachedWorkerwParent = IntPtr.Zero;
-        RunAsBottommost();
-
-        StatusText.Text = string.Format(
-            CultureInfo.InvariantCulture,
-            Ui("WorkerwFailedStatusText"),
-            reason);
-    }
-
-    private void RunAsBottommost()
-    {
         InstallBottommostZOrderHook();
+        var bottommostResult = DesktopAttach.MoveToBottommost(_windowHandle);
+        Trace.WriteLine(
+            $"DesktopTodoWidget bottommost success={bottommostResult.Success} " +
+            $"lastError={bottommostResult.LastError} detail={bottommostResult.Detail}");
+    }
 
-        var result = DesktopAttach.MoveToBottommost(_windowHandle);
-        WriteLog($"bottommost success={result.Success} lastError={result.LastError} detail={result.Detail}");
-
-        if (_options.Mode == AttachMode.Bottommost)
+    private void RestoreSavedPlacement()
+    {
+        var defaultBounds = new WindowRectangle(DefaultLeft, DefaultTop, WindowWidth, WindowHeight);
+        var readResult = _placementStore.Read(new WindowPlacement
         {
-            StatusText.Text = Ui("BottommostStatusText");
+            Left = DefaultLeft,
+            Top = DefaultTop
+        });
+        var savedBounds = new WindowRectangle(
+            readResult.Value.Left,
+            readResult.Value.Top,
+            WindowWidth,
+            WindowHeight);
+        var safeBounds = WindowPlacement.ClampToVisibleArea(
+            savedBounds,
+            GetWorkingAreas(),
+            defaultBounds);
+
+        Left = safeBounds.Left;
+        Top = safeBounds.Top;
+
+        if (readResult.HadInvalidData)
+        {
+            Trace.WriteLine("DesktopTodoWidget window placement data was invalid; a safe position was used.");
         }
     }
+
+    private static IReadOnlyList<WindowRectangle> GetWorkingAreas()
+    {
+        var monitorWorkingAreas = DesktopAttach.GetMonitorWorkingAreas();
+        var workingAreas = new List<WindowRectangle>(monitorWorkingAreas.Count);
+
+        foreach (var workingArea in monitorWorkingAreas)
+        {
+            if (workingArea.IsPrimary)
+            {
+                workingAreas.Add(ToWindowRectangle(workingArea));
+            }
+        }
+
+        if (workingAreas.Count == 0)
+        {
+            return [];
+        }
+
+        foreach (var workingArea in monitorWorkingAreas)
+        {
+            if (!workingArea.IsPrimary)
+            {
+                workingAreas.Add(ToWindowRectangle(workingArea));
+            }
+        }
+
+        return workingAreas;
+    }
+
+    private static WindowRectangle ToWindowRectangle(DesktopAttach.MonitorWorkingArea workingArea) =>
+        new(workingArea.Left, workingArea.Top, workingArea.Width, workingArea.Height);
 
     private void InstallBottommostZOrderHook()
     {
@@ -169,14 +128,13 @@ public partial class MainWindow : Window
         var windowSource = HwndSource.FromHwnd(_windowHandle);
         if (windowSource is null)
         {
-            WriteLog("bottommost z-order hook attach failed: HwndSource unavailable");
+            Trace.WriteLine("DesktopTodoWidget bottommost z-order hook was not attached because HwndSource was unavailable.");
             return;
         }
 
         _windowSource = windowSource;
         _bottommostZOrderHook = BottommostZOrderHook;
         _windowSource.AddHook(_bottommostZOrderHook);
-        WriteLog("bottommost z-order hook attached");
     }
 
     private void RemoveBottommostZOrderHook()
@@ -189,7 +147,6 @@ public partial class MainWindow : Window
         _windowSource?.RemoveHook(_bottommostZOrderHook);
         _bottommostZOrderHook = null;
         _windowSource = null;
-        WriteLog("bottommost z-order hook removed");
     }
 
     private IntPtr BottommostZOrderHook(
@@ -210,6 +167,77 @@ public partial class MainWindow : Window
         return IntPtr.Zero;
     }
 
+    private void MainWindow_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left || IsInsideControl(e.OriginalSource as DependencyObject))
+        {
+            return;
+        }
+
+        DragMove();
+        SchedulePlacementSave();
+    }
+
+    private static bool IsInsideControl(DependencyObject? element)
+    {
+        while (element is not null)
+        {
+            if (element is Control)
+            {
+                return true;
+            }
+
+            element = GetParent(element);
+        }
+
+        return false;
+    }
+
+    private static DependencyObject? GetParent(DependencyObject element)
+    {
+        return element switch
+        {
+            Visual or Visual3D => VisualTreeHelper.GetParent(element),
+            FrameworkContentElement contentElement => contentElement.Parent,
+            _ => LogicalTreeHelper.GetParent(element)
+        };
+    }
+
+    private void SchedulePlacementSave()
+    {
+        _placementSavePending = true;
+        _placementSaveTimer.Stop();
+        _placementSaveTimer.Start();
+    }
+
+    private void PlacementSaveTimer_Tick(object? sender, EventArgs e)
+    {
+        SaveCurrentPlacement(force: false);
+    }
+
+    private void SaveCurrentPlacement(bool force)
+    {
+        _placementSaveTimer.Stop();
+        if (!force && !_placementSavePending)
+        {
+            return;
+        }
+
+        try
+        {
+            _placementStore.Write(new WindowPlacement
+            {
+                Left = Left,
+                Top = Top
+            });
+            _placementSavePending = false;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            Trace.WriteLine($"DesktopTodoWidget could not save window placement: {exception.Message}");
+        }
+    }
+
     private void MainWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key != Key.Escape)
@@ -217,55 +245,23 @@ public partial class MainWindow : Window
             return;
         }
 
-        WriteLog("closing: Escape pressed");
         e.Handled = true;
         Close();
     }
 
+    private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        SaveCurrentPlacement(force: true);
+    }
+
     private void MainWindow_Closed(object? sender, EventArgs e)
     {
+        _placementSaveTimer.Stop();
         RemoveBottommostZOrderHook();
-
-        if (_lastAttachedWorkerwParent == IntPtr.Zero)
-        {
-            return;
-        }
-
-        var formerWorkerwParent = _lastAttachedWorkerwParent;
-        _workerwParent = IntPtr.Zero;
-        var restoreResult = DesktopAttach.RestoreTopLevelStyle(_windowHandle);
-        WriteLog(
-            $"close restore top-level success={restoreResult.Success} lastError={restoreResult.LastError} " +
-            $"detail={restoreResult.Detail}");
-        DesktopAttach.RequestDesktopRepaint(formerWorkerwParent, WriteLog);
-        _lastAttachedWorkerwParent = IntPtr.Zero;
-    }
-
-    private void VerifyButton_Click(object sender, RoutedEventArgs e)
-    {
-        _clickCount++;
-        VerifyButton.Content = string.Format(CultureInfo.InvariantCulture, Ui("ClickedButtonText"), _clickCount);
-    }
-
-    private string ModeName => _options.Mode == AttachMode.Workerw ? "workerw" : "bottommost";
-
-    private string TargetName => _options.Target == WorkerwTarget.Workerw ? "workerw" : "progman";
-
-    private static string Ui(string key) => (string)Application.Current.Resources[key];
-
-    private void WriteLog(string message)
-    {
-        var line = $"{DateTimeOffset.Now:O} {message}{Environment.NewLine}";
-
-        try
-        {
-            var directory = Path.GetDirectoryName(_logPath)!;
-            Directory.CreateDirectory(directory);
-            File.AppendAllText(_logPath, line, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-        }
-        catch (Exception exception)
-        {
-            Debug.WriteLine($"Unable to write spike log: {exception.Message}");
-        }
     }
 }

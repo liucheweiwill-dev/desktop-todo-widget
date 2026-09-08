@@ -88,7 +88,7 @@ public sealed class TodoDocumentStore
 
     private static TodoDocumentData ToData(TodoDocument document)
     {
-        var items = new List<TodoItemData>();
+        var items = new List<TodoItemData?>();
         if (document.Items is not null)
         {
             foreach (var item in document.Items)

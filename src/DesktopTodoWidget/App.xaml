@@ -3,11 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sys="clr-namespace:System;assembly=mscorlib">
   <Application.Resources>
-    <sys:String x:Key="WindowTitleText">Desktop Todo Widget Spike</sys:String>
-    <sys:String x:Key="VerifyButtonText">Verify click</sys:String>
-    <sys:String x:Key="ClickedButtonText">clicked {0}</sys:String>
-    <sys:String x:Key="BottommostStatusText">bottommost active</sys:String>
-    <sys:String x:Key="WorkerwAttachedStatusText">workerw ({0}) attached</sys:String>
-    <sys:String x:Key="WorkerwFailedStatusText">workerw FAILED ({0}) — running as bottommost</sys:String>
+    <sys:String x:Key="WindowTitleText">Desktop Todo Widget</sys:String>
+    <sys:String x:Key="PlaceholderText">Your todos will appear here.</sys:String>
+    <sys:String x:Key="ExitMenuItemText">Exit</sys:String>
   </Application.Resources>
 </Application>

@@ -12,32 +12,17 @@
         ResizeMode="NoResize"
         AllowsTransparency="False"
         ShowInTaskbar="False">
-  <Grid Margin="24">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto" />
-      <RowDefinition Height="24" />
-      <RowDefinition Height="Auto" />
-      <RowDefinition Height="16" />
-      <RowDefinition Height="Auto" />
-      <RowDefinition Height="*" />
-    </Grid.RowDefinitions>
+  <Window.ContextMenu>
+    <ContextMenu>
+      <MenuItem Header="{DynamicResource ExitMenuItemText}"
+                Click="ExitMenuItem_Click" />
+    </ContextMenu>
+  </Window.ContextMenu>
 
-    <TextBlock x:Name="StatusText"
-               Grid.Row="0"
-               TextWrapping="Wrap"
-               FontSize="16" />
-
-    <Button x:Name="VerifyButton"
-            Grid.Row="2"
-            Width="130"
-            Height="32"
-            HorizontalAlignment="Left"
-            Content="{DynamicResource VerifyButtonText}"
-            Click="VerifyButton_Click" />
-
-    <TextBox x:Name="InputTextBox"
-             Grid.Row="4"
-             Height="32"
-             VerticalContentAlignment="Center" />
+  <Grid Background="#1E1E1E">
+    <TextBlock HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               Text="{DynamicResource PlaceholderText}"
+               TextWrapping="Wrap" />
   </Grid>
 </Window>
