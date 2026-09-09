@@ -1,20 +1,29 @@
 # Progress
 
-## 現況總覽（2026-09-08）
+## 現況總覽（2026-09-09）
 
 | | |
 |---|---|
 | 技術 | C# / .NET 10 / WPF，`win-x64` self-contained |
 | 測試 | **60 passed / 0 failed** |
 | 建置 | 零錯誤零警告 |
-| 發佈體積 | 141MB（未壓縮） |
 | 依賴 | 主專案 **0 個 NuGet 套件**；測試專案 xUnit（不出貨） |
 | 端機需求 | 無——不需 .NET Runtime、VC++ Redist、WebView2 |
-| 最新 commit | `472f43d` |
-| 發佈檔 | `publish\DesktopTodoWidget.exe`（可直接執行） |
+| 最新 commit | `7528330` |
 | 資料位置 | `%LOCALAPPDATA%\DesktopTodoWidget\`（`todos.json`、`window.json`，各有 `.bak`） |
+| 遠端 | `origin/main` 已同步（公開 repo） |
+| 已發布 | **v1.0.0、v1.0.1**（v1.0.1 為 Latest） |
 
-**功能已全部完成，只剩打包（P1）。**
+**所有階段完成，已對外發布。** 專案進入維護狀態。
+
+### 已發布的兩種成品（同一支程式，只有打包形態不同）
+
+| 檔案 | 體積 | 內容 | 用途 |
+|---|---|---|---|
+| `DesktopTodoWidget-win-x64-folder.zip` | 60.1 MB | 256 檔案，exe 僅 162KB | **預設推薦**，防毒觀感正常 |
+| `DesktopTodoWidget-win-x64.zip` | 56.4 MB | 6 檔案，壓縮 bundle | 整潔，但**容易被防毒啟發式誤判** |
+
+理由見下方「散布時的防毒問題」與 `findings.md` D5。
 
 ## 階段狀態
 
@@ -31,7 +40,8 @@
 | R1 | 拖曳排序 | **完成**（人工 D1–D9 全過） | `eb6371b` |
 | U2 | 每項字型大小與顏色 | **完成**（部分人工驗收未回報，見下） | `81db465` |
 | U2b | 色票重調（分辨度） | **完成** | `472f43d` |
-| **P1** | **打包** | **未開始，待使用者拍板形態** | — |
+| **H1** | **標題列說明按鈕 `?`** | **完成**（驗收見下） | `f694a11` `7528330` |
+| **P1** | **打包與發布** | **完成**，形態＝免安裝資料夾 | `31bb752` |
 
 ---
 
@@ -70,19 +80,32 @@
 - 每列 `×` 刪除
 - **拖曳項目重新排序**（插入指示線、邊緣自動捲動）
 - **每列 ⚙ 設定字型大小（10–28）與顏色（八色色票）**
+- **標題列右端 `?` 開啟使用說明彈窗**（英文，內容含「看不見時怎麼辦」）
 - 位置與所有內容持久化，關閉前同步落盤
 - 單一實例；Esc 或右鍵 `Exit` 關閉
 
-### Esc 有三個語意，優先序不可弄反
+### Esc 有四個語意，優先序不可弄反
 
-**拖曳中取消拖曳 > 編輯中取消編輯 > 否則關閉視窗。**
-寫錯會在拖曳或編輯時把程式關掉，使用者剛打的字全沒。
+**拖曳中取消拖曳 > 說明開啟時關說明 > 編輯中取消編輯 > 否則關閉視窗。**
+寫錯會在拖曳、編輯或閱讀說明時把程式關掉，使用者剛打的字全沒。
+
+第二階是 H1 加的。注意 `Popup` 是獨立 HWND，焦點在 popup 內時鍵盤事件**不會**冒泡到
+`MainWindow_PreviewKeyDown`；目前是靠把 popup 與其 `ScrollViewer` 設為 `Focusable="False"`
+讓焦點留在主視窗，這條路才成立。
 
 ---
 
+## 已定案
+
+| 決策 | 結論 | 依據 |
+|---|---|---|
+| 開機自啟 | **不做** | `findings.md` D2.1：資料每 500ms 落盤，重開機後雙擊即完整還原，而「開機後手動點一次」正是雙擊唯一有效的情境，不值得碰登錄檔或啟動資料夾 |
+| P1 打包形態 | **免安裝資料夾** | 見下方防毒段落；`findings.md` D5 有三種形態的實測數字 |
+| 說明彈窗位置 | 錨定 `WindowDragStrip` 而非 `HelpButton` | 錨在靠右的按鈕上會有 336px 掛在視窗外；改錨拖曳條後 overhang 為 −6px |
+
 ## 待使用者處理
 
-### 1. U2 的人工驗收尚未回報
+### U2 的人工驗收仍未回報
 
 使用者只回報了色票分辨度問題（已修），下列仍未確認：
 
@@ -94,22 +117,93 @@
 | P5 | 關閉再開 → 大小與顏色都記住 |
 | **P7** | **字型調大後拖曳排序仍正常**（列高改變會影響插入線計算） |
 
-### 2. P1 打包形態，需使用者拍板
+這批是 U2 留下的唯一缺口。**注意 v1.0.0／v1.0.1 是在這些未驗的情況下發布的。**
 
-| | 單一 exe | 免安裝資料夾 |
+---
+
+## 差點跟著 v1.0.0 出貨的當機缺陷（2026-09-08 修復，`94d6dfc`）
+
+**清單長到需要捲軸就當掉，而且每次啟動都當。**
+
+```
+System.InvalidCastException: Unable to cast object of type
+'System.Double' to type 'System.Windows.GridLength'
+```
+
+`TodoVerticalScrollBarStyle` 用 `{x:Static SystemParameters.VerticalScrollBarButtonHeight}`
+指定 `RowDefinition.Height`。前者是 `double`，後者要 `GridLength`。
+**寫字面值 `"17"` 時型別轉換器會轉，`{x:Static}` 直接塞物件進去則不會。**
+
+### 為什麼兩個月都沒被發現
+
+**ControlTemplate 只在控制項真的需要時才展開。** 捲軸只在清單長到需要捲動時才出現，
+而開發期間的測試資料只有 4 筆。實測放 30 筆 → **啟動即崩潰**；因為待辦存在 JSON，
+**之後每次啟動都崩潰**，使用者除了手動編輯 JSON 沒有別的救法。
+
+修法：row 改 `Auto`，把系統尺寸移到 RepeatButton 的 `Height`（那本來就收 double）。
+
+### 教訓（比修法本身重要）
+
+1. **延遲建立的 UI 不會在啟動時暴露錯誤。** `Popup` 內容、`ControlTemplate`、
+   `DataTemplate` 都是用到才建。「程式跑起來了」完全不代表這些沒問題。
+2. **它是被 H1 的說明彈窗意外踩出來的**——那個彈窗內容夠長，需要捲軸。
+   一個看似無關的小功能，才讓兩個月的地雷現形。
+3. **人工驗收清單要包含「資料量大」的情境。** 之前所有人工驗收都只用 4 筆資料跑。
+
+---
+
+## 合成滑鼠事件打不到這個視窗（驗證方法的硬限制）
+
+**`SendInput` / `mouse_event` 的點擊與拖曳，這個 bottommost 視窗收不到。**
+
+對照實驗確立的，不是猜的：對第一列勾選框送出合成點擊後，`todos.json` 的 `isDone`
+**完全沒變**，而勾選框是 U1 已人工驗證可用的功能。鍵盤事件（Esc）則正常送達。
+
+### 因此可自動化與不可自動化的界線
+
+| 可自動化 | 手段 |
+|---|---|
+| 視窗是否存在、位置、大小、z-order | `EnumWindows` + `GetWindowRect` |
+| 畫面長相 | **`PrintWindow`（含 `PW_RENDERFULLCONTENT`＝2）**，被其他視窗蓋住也能擷取 |
+| 是否被蓋住 | `WindowFromPoint` 打中心點問最上層是誰 |
+| 按鈕觸發、彈窗開啟與幾何 | **UI Automation `InvokePattern`** |
+| 鍵盤行為（Esc 各階） | `keybd_event` |
+
+| 不可自動化 | 只能人工 |
+|---|---|
+| 滑鼠點擊命中測試 | 拖曳條可拖、點他處關彈窗、拖曳排序 |
+
+**跑 UIA 或截圖驗證時務必設對照組**（例如已知可用的 ⚙ 彈窗）。這個 session 曾因為
+沒設對照組，把「工具打不到」誤判成「功能壞掉」，來回三次。
+
+另外兩個實測踩過的坑：**滑鼠停在按鈕上會冒出 tooltip，那是一個 77x23 的獨立視窗，
+很容易被誤認成彈窗**（量測前先把游標移開）；以及 `CopyFromScreen` 擷到的是螢幕內容，
+視窗被蓋住時拍到的是別人的畫面，**一律改用 `PrintWindow`**。
+
+---
+
+## 散布時的防毒問題（2026-09-09）
+
+**未簽章 + 壓縮 bundle = 防毒啟發式的標準目標。**
+
+`PublishSingleFile` + `EnableCompressionInSingleFile` 產生的 exe，行為是
+「內含壓縮過的兩百多個 DLL → 啟動時在記憶體解壓 → 從該記憶體載入執行」。
+這個輪廓與惡意程式的 packer／dropper 幾乎相同，`Heur` / `ML` / `Generic` / `Packed` /
+`Wacatac` 這類通用偵測就是打這個。
+
+**因此 P1 定案為免安裝資料夾**：256 個檔案、exe 只有 162KB，長得像一般 .NET 程式。
+兩種都掛在 v1.0.1 上，發布說明以資料夾版為主。
+
+三道獨立關卡，別搞混：
+
+| 關卡 | 成因 | 解法 |
 |---|---|---|
-| 交付 | 一個檔案 | 一個資料夾 |
-| 執行時 | native DLL 解壓到 `%TEMP%\.net` | 不解壓 |
-| 體積 | 開 `EnableCompressionInSingleFile` 約 60–95MB（**待實測**） | 141MB |
+| SmartScreen | 未簽章且該雜湊零下載信譽 | 「其他資訊 → 仍要執行」；根治需 EV 憑證 |
+| Mark of the Web | 從網路下載會加 `Zone.Identifier` | **解壓前**先對 zip「解除封鎖」；或改用 USB／區網複製 |
+| 防毒啟發式 | 打包形態可疑 | 改用資料夾版；或向廠商回報誤判 |
 
-需求原文寫「single file self-contained exe」，但也允許免安裝資料夾。
-**此決策不由實作者自行決定**（findings.md D5）。
-
-### 已定案（2026-09-08）
-
-**開機自啟不做。** 理由見 `findings.md` D2.1：資料每 500ms 落盤，重開機後雙擊即完整還原，
-而「開機後手動點一次」正是雙擊唯一有效的情境，不值得為此碰登錄檔或啟動資料夾。
-**這也表示最終使用說明必須寫明復原手勢是 Win+D。**
+**根治只有程式碼簽章憑證**：OV 約 US$200–400/年（SmartScreen 信譽仍需累積），
+EV 約 US$300–600/年（立即取得信任）。目前未購買。
 
 ---
 
@@ -183,8 +277,25 @@ dotnet build src/DesktopTodoWidget/DesktopTodoWidget.csproj -c Release --no-rest
 dotnet test tests/DesktopTodoWidget.Tests/DesktopTodoWidget.Tests.csproj --no-restore
 ```
 
+發布用的**資料夾版**（P1 定案形態，256 檔案）：
+
 ```
-dotnet publish src/DesktopTodoWidget/DesktopTodoWidget.csproj -c Release -r win-x64 --self-contained true --no-restore -o publish
+dotnet publish src/DesktopTodoWidget/DesktopTodoWidget.csproj -c Release -r win-x64 --self-contained true -p:Version=1.0.1 --no-restore -o publish
+```
+
+6 檔案的壓縮 bundle 版（整潔但易被防毒誤判）：
+
+```
+dotnet publish src/DesktopTodoWidget/DesktopTodoWidget.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:Version=1.0.1 --no-restore -o publish
+```
+
+**出貨前一定要刪掉 `publish/DesktopTodoWidget.pdb`**——成品不需要，而且它會洩漏
+開發機的原始碼路徑。
+
+發布（**需使用者明確授權**才能 push 或散布）：
+
+```
+gh release create v1.0.1 <zip> --title "Desktop Todo Widget 1.0.1" --notes "..."
 ```
 
 UI 與視窗行為不寫自動化測試（findings.md D6），走各卡片的人工驗收清單。
